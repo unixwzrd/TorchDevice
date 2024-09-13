@@ -1,0 +1,36 @@
+# .gitignore
+
+# VSCode
+.vscode/
+
+# Python Specific
+__pycache__/
+build/
+dist/
+env/
+
+# Project Miscellaneous
+log/
+tmp/
+
+# Environments (Python)
+.env
+.env.sh
+.env.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+*.egg
+*.egg-info/
+*.log
+
+# macOS specific
+.DS_Store
