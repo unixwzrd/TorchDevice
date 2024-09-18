@@ -1,2 +1,0 @@
-. shinclude/errno.sh
-errno echild
