@@ -2,7 +2,7 @@
 
 # Example 1: Basic Tensor Operations
 
-import TorchDevice
+import torchdevice
 import torch
 import numpy as np
 

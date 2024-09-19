@@ -1,6 +1,6 @@
 # TorchDevice
 
-TorchDevice is a Python module that intercepts PyTorch calls related to GPU hardware, enabling transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware. It allows developers to write code that works seamlessly on both hardware types without modification and is meant to assist in porting code from CUDA to MPS.
+TorchDevice is a class in the torchdevice.py package that intercepts PyTorch calls related to GPU hardware, enabling transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware. It allows developers to write code that works seamlessly on both hardware types without modification and is meant to assist in porting code from CUDA to MPS.
 
 ## Table of Contents
 
@@ -96,7 +96,7 @@ pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/w
 Import `TorchDevice` in your code before or after importing `torch`. The module will automatically apply patches to intercept and redirect PyTorch calls.
 
 ```python
-import TorchDevice  # Import TorchDevice to apply patches
+import torchdevice  # import torchdevice to apply patches
 import torch
 
 device = torch.device('cuda')  # This will be redirected based on available hardware

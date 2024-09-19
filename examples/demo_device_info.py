@@ -2,7 +2,7 @@
 
 # Demo 5: Device Information
 
-import TorchDevice
+import torchdevice
 import torch
 
 def main():

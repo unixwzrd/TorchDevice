@@ -1,0 +1,24 @@
+# Include the README file
+include README.md
+
+# Include the LICENSE file
+include LICENSE
+
+# Include the requirements file
+include requirements.txt
+
+# Include the setup script
+include setup.py
+
+# Include all Python files in the main module directory
+recursive-include your_module *.py
+
+# Include all example programs
+recursive-include examples *.py
+
+# Include all test files
+recursive-include tests *.py
+
+# Exclude compiled Python files
+exclude *.pyc
+exclude __pycache__

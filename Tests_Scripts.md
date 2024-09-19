@@ -9,7 +9,7 @@ Below are several test scripts using NumPy arrays and PyTorch tensors that demon
 ```python
 # demo_basic_tensor.py
 
-import TorchDevice
+import torchdevice
 import torch
 import numpy as np
 
@@ -50,7 +50,7 @@ python demo_basic_tensor.py
 ```python
 # demo_matrix_multiplication.py
 
-import TorchDevice
+import torchdevice
 import torch
 import numpy as np
 
@@ -92,7 +92,7 @@ python demo_matrix_multiplication.py
 ```python
 # demo_neural_network.py
 
-import TorchDevice
+import torchdevice
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -149,7 +149,7 @@ python demo_neural_network.py
 ```python
 # demo_unsupported_functions.py
 
-import TorchDevice
+import torchdevice
 import torch
 
 def main():
@@ -183,7 +183,7 @@ python demo_unsupported_functions.py
 ```python
 # demo_device_info.py
 
-import TorchDevice
+import torchdevice
 import torch
 
 def main():

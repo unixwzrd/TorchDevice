@@ -1,7 +1,8 @@
+#!/usr/bin/env python
 import unittest
 import torch
 import numpy as np
-import TorchDevice  # Ensure this module is imported to apply patches
+import torchdevice  # Ensure this module is imported to apply patches
 
 class TestTorchDevice(unittest.TestCase):
 
@@ -23,6 +24,55 @@ class TestTorchDevice(unittest.TestCase):
         self.assertEqual(device_cuda.type, expected_device_type)
         self.assertEqual(device_mps.type, expected_device_type)
         self.assertEqual(device_cpu.type, 'cpu')
+
+    def test_submodule_call(self):
+        # Import the sub-module
+        from test_submodule import ModelTrainer
+
+        # Create an instance of ModelTrainer
+        trainer = ModelTrainer()
+        trainer.start_training()
+
+        # Verify that the device is as expected
+        expected_device_type = self.device.type
+        device = torch.device('cuda')  # This will be redirected
+        self.assertEqual(device.type, expected_device_type)
+
+        # Since the device in start_training() should match the expected device
+        # We can also capture the printed output if needed
+            # But for this test, we are focusing on ensuring no exceptions occur
+
+    def test_nested_function_call(self):
+        from test_submodule import ModelTrainer
+
+        trainer = ModelTrainer()
+        trainer.call_nested_function()
+
+        # Verify the device type
+        expected_device_type = self.device.type
+        device = torch.device('cuda')
+        self.assertEqual(device.type, expected_device_type)
+
+    def test_static_method_call(self):
+        from test_submodule import ModelTrainer
+
+        ModelTrainer.static_method()
+
+        # Verify the device type
+        expected_device_type = self.device.type
+        device = torch.device('cuda')
+        self.assertEqual(device.type, expected_device_type)
+
+    def test_class_method_call(self):
+        from test_submodule import ModelTrainer
+
+        ModelTrainer.class_method()
+
+        # Verify the device type
+        expected_device_type = self.device.type
+        device = torch.device('cuda')
+        self.assertEqual(device.type, expected_device_type)
+
 
     def test_cuda_functions_on_mps(self):
         # Test CUDA functions on MPS hardware
@@ -208,7 +258,7 @@ class TestTorchDevice(unittest.TestCase):
 
     def test_module_import_order(self):
         # Test that TorchDevice works regardless of import order
-        import TorchDevice
+        import torchdevice
         import torch
 
         device = torch.device('cuda')

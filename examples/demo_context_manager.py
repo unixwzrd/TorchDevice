@@ -2,7 +2,7 @@
 
 # Example 2: Using the Device Context Manager
 
-import TorchDevice
+import torchdevice
 import torch
 
 with torch.cuda.device(0):

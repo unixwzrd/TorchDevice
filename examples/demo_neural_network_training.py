@@ -2,7 +2,7 @@
 
 # Demo 3: Neural Network Training Loop
 
-import TorchDevice
+import torchdevice
 import torch
 import torch.nn as nn
 import torch.optim as optim
