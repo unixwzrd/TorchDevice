@@ -9,7 +9,7 @@ import torch
 # Configure logging to output to STDERR
 logger = logging.getLogger('TorchDevice')
 handler = logging.StreamHandler(sys.stderr)
-# Update the formatter to include class name and method
+# Update the formatter to include program name, module, class, function, and line number
 formatter = logging.Formatter(
     '[%(program_name)s]: GPU REDIRECT in %(module_name)s.%(class_name)s.%(caller_func_name)s '
     'line %(caller_lineno)d: %(message)s'
@@ -28,12 +28,13 @@ def get_caller_info():
         frame_info = inspect.getframeinfo(outer_frame[0])
         filename = frame_info.filename
         # Exclude frames from TorchDevice and built-in libraries
-        if 'torchdevice' not in filename.lower() and 'logging' not in filename and 'importlib' not in filename:
+        excluded_files = ['torchdevice', 'logging', 'importlib', 'threading']
+        if not any(excluded in filename.lower() for excluded in excluded_files):
             caller_filename = os.path.basename(filename)
             lineno = frame_info.lineno
             func_name = frame_info.function
-            module_name = inspect.getmodule(outer_frame[0])
-            module_name = module_name.__name__ if module_name else 'UnknownModule'
+            module = inspect.getmodule(outer_frame[0])
+            module_name = module.__name__ if module else 'UnknownModule'
             # Attempt to get the class name
             cls_name = 'N/A'
             if 'self' in outer_frame[0].f_locals:
@@ -112,7 +113,7 @@ class TorchDevice:
     _original_torch_device = torch.device
     _original_torch_cuda_device = torch.cuda.device  # Context manager
 
-    def __init__(self, device_type: str=None , device_index: int=None):
+    def __init__(self, device_type: str = None, device_index: int = None):
         with self._lock:
             if self._default_device is None:
                 self.__class__._detect_default_device()
@@ -202,7 +203,7 @@ class TorchDevice:
             log_info(f"CUDA device count: {count}", torch_function='torch.cuda.device_count')
             return count
         elif cls._default_device == 'mps':
-            log_warning("CUDA device count requested but CUDA is not available. Returning 1 due to MPS.", torch_function='torch.cuda.device_count')
+            log_info("Returning device count as 1 for MPS.", torch_function='torch.cuda.device_count')
             return 1
         else:
             log_warning("CUDA device count requested but no GPU is available. Returning 0.", torch_function='torch.cuda.device_count')
@@ -216,7 +217,7 @@ class TorchDevice:
             log_info(f"CUDA device properties for device {device}: {props}", torch_function='torch.cuda.get_device_properties')
             return props
         elif cls._default_device == 'mps':
-            log_warning("Returning MPS device properties.", torch_function='torch.cuda.get_device_properties')
+            log_info("Returning MPS device properties.", torch_function='torch.cuda.get_device_properties')
             # Mock MPS device properties
             class MPSDeviceProperties:
                 name = 'Apple MPS'
@@ -300,7 +301,8 @@ class TorchDevice:
             log_info(f"Setting CUDA device to {device}", torch_function='torch.cuda.set_device')
             cls._original_torch_cuda_set_device(device)
         elif cls._default_device == 'mps':
-            pass  # MPS does not support setting device
+            log_warning("MPS does not support setting device.", torch_function='torch.cuda.set_device')
+            # No action needed; MPS does not support multiple devices
         else:
             log_warning("No GPU available to set device.", torch_function='torch.cuda.set_device')
 
@@ -335,11 +337,13 @@ class TorchDevice:
     @classmethod
     def mock_cuda_memory_stats(cls, device=None):
         """Replacement for torch.cuda.memory_stats."""
-        return {
+        stats = {
             'active.all.current': cls.mock_cuda_memory_allocated(device),
             'reserved_bytes.all.current': cls.mock_cuda_memory_reserved(device),
             # Add other stats as needed
         }
+        log_info(f"Memory stats: {stats}", torch_function='torch.cuda.memory_stats')
+        return stats
 
     @classmethod
     def mock_cuda_memory_snapshot(cls):
@@ -379,11 +383,6 @@ class TorchDevice:
             log_warning("No GPU available. Returning empty arch list.", torch_function='torch.cuda.get_arch_list')
             return []
 
-    @staticmethod
-    def mock_cuda_function_stub(*args, **kwargs):
-        """Stub function for unsupported CUDA functions."""
-        log_warning("Unsupported function called. Ignoring.", torch_function='torch.cuda')
-
     @classmethod
     def mock_cuda_is_built(cls):
         """Replacement for torch.backends.cuda.is_built."""
@@ -412,21 +411,79 @@ class TorchDevice:
 
         return DeviceContextManager(device)
 
+    # Additional mocks for new functions
+    @classmethod
+    def mock_cuda_reset_peak_memory_stats(cls):
+        """Replacement for torch.cuda.reset_peak_memory_stats."""
+        if cls._default_device in ['cuda', 'mps']:
+            log_info("Resetting peak memory stats.", torch_function='torch.cuda.reset_peak_memory_stats')
+            # Implement any necessary behavior, or provide a no-op
+        else:
+            log_warning("No GPU available to reset peak memory stats.", torch_function='torch.cuda.reset_peak_memory_stats')
+
+    @classmethod
+    def mock_cuda_ipc_collect(cls):
+        """Replacement for torch.cuda.ipc_collect."""
+        if cls._default_device in ['cuda', 'mps']:
+            log_info("Collecting IPC memory.", torch_function='torch.cuda.ipc_collect')
+            # Implement any necessary behavior, or provide a no-op
+        else:
+            log_warning("No GPU available to collect IPC memory.", torch_function='torch.cuda.ipc_collect')
+
+    @classmethod
+    def mock_cuda_stream(cls, *args, **kwargs):
+        """Replacement for torch.cuda.stream."""
+        log_warning("CUDA streams are not supported on this device. Ignoring.", torch_function='torch.cuda.stream')
+
+    @classmethod
+    def mock_cuda_stream_class(cls, *args, **kwargs):
+        """Replacement for torch.cuda.Stream."""
+        log_warning("CUDA Stream class is not supported on this device.", torch_function='torch.cuda.Stream')
+        # Return a mock object if necessary
+        class MockStream:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __enter__(self):
+                pass
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                pass
+
+        return MockStream()
+
+    @classmethod
+    def mock_cuda_event(cls, *args, **kwargs):
+        """Replacement for torch.cuda.Event."""
+        log_warning("CUDA Event is not supported on this device.", torch_function='torch.cuda.Event')
+        # Return a mock object if necessary
+        class MockEvent:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def record(self, *args, **kwargs):
+                pass
+
+            def wait(self, *args, **kwargs):
+                pass
+
+            def query(self):
+                return True
+
+        return MockEvent()
+
+    @staticmethod
+    def mock_cuda_function_stub(*args, **kwargs):
+        """Stub function for unsupported CUDA functions."""
+        log_warning("Unsupported CUDA function called. Ignoring.", torch_function='torch.cuda')
+
     @classmethod
     def apply_patches(cls):
         """Apply patches to replace torch.device and torch.cuda methods with the mock functions."""
-        # List of unsupported functions to be stubbed
-        unsupported_functions = [
-            'ipc_collect', 'reset_accumulated_memory_stats',
-            'reset_peak_memory_stats', 'reset_max_memory_allocated',
-            'reset_max_memory_cached', 'stream', 'Stream', 'Event'
-        ]
-
-        for func_name in unsupported_functions:
-            setattr(torch.cuda, func_name, cls.mock_cuda_function_stub)
+        # Replace torch.device with our TorchDevice class
+        torch.device = cls.torch_device_replacement
 
         # Override CUDA functions with mocks
-        torch.device = cls.torch_device_replacement
         torch.cuda.is_available = cls.mock_cuda_is_available
         torch.cuda.device_count = cls.mock_cuda_device_count
         torch.cuda.get_device_properties = cls.mock_cuda_get_device_properties
@@ -448,11 +505,35 @@ class TorchDevice:
         torch.backends.cuda.is_built = cls.mock_cuda_is_built
         torch.cuda.device = cls.mock_cuda_device_context  # Override the context manager
 
-        # Apply stubs to any missing CUDA functions
-        cuda_functions = unsupported_functions
-        for func_name in cuda_functions:
+        # Override additional CUDA functions with mocks
+        torch.cuda.reset_peak_memory_stats = cls.mock_cuda_reset_peak_memory_stats
+        torch.cuda.ipc_collect = cls.mock_cuda_ipc_collect
+        torch.cuda.stream = cls.mock_cuda_stream
+        torch.cuda.Stream = cls.mock_cuda_stream_class
+        torch.cuda.Event = cls.mock_cuda_event
+
+        # List of unsupported functions to be stubbed
+        unsupported_functions = [
+            'set_stream', 'mem_get_info', 'reset_accumulated_memory_stats',
+            'reset_max_memory_allocated', 'reset_max_memory_cached',
+            'caching_allocator_alloc', 'caching_allocator_delete',
+            'get_allocator_backend', 'change_current_allocator',
+            'nvtx', 'jiterator', 'graph', 'CUDAGraph',
+            'make_graphed_callables', 'is_current_stream_capturing',
+            'graph_pool_handle', 'can_device_access_peer',
+            'comm', 'get_gencode_flags', 'current_blas_handle',
+            'memory_usage', 'utilization', 'temperature', 'power_draw',
+            'clock_rate', 'set_sync_debug_mode', 'get_sync_debug_mode',
+            'list_gpu_processes', 'seed', 'seed_all', 'manual_seed',
+            'manual_seed_all', 'get_rng_state', 'get_rng_state_all',
+            'set_rng_state', 'set_rng_state_all', 'initial_seed',
+        ]
+
+        # Apply stubs to unsupported CUDA functions
+        for func_name in unsupported_functions:
             if not hasattr(torch.cuda, func_name):
-                setattr(torch.cuda, func_name, cls.mock_cuda_function_stub)
+                continue
+            setattr(torch.cuda, func_name, cls.mock_cuda_function_stub)
 
 # Apply patches when the module is imported
 TorchDevice.apply_patches()
