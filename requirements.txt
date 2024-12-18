@@ -1,3 +1,5 @@
-torch>=1.9.0
+# Get torch from teh nightly builds
+torch --index-url https://download.pytorch.org/whl/nightly/cpu
+# torch>=1.9.0
 numpy
 psutil
