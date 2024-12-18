@@ -1,10 +1,10 @@
-# TorchDevice
+# TorchDevice *WIP*`
 
 TorchDevice is a class in the torchdevice.py package that intercepts PyTorch calls related to GPU hardware, enabling transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware. It allows developers to write code that works seamlessly on both hardware types without modification and is meant to assist in porting code from CUDA to MPS.
 
 ## Table of Contents
 
-- [TorchDevice](#torchdevice)
+- [TorchDevice *WIP*\`](#torchdevice-wip)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Installation](#installation)
