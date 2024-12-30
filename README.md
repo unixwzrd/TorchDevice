@@ -12,6 +12,7 @@ TorchDevice is a class in the torchdevice.py package that intercepts PyTorch cal
     - [Installing PyTorch](#installing-pytorch)
       - [Nightly builds for Apple Silicon](#nightly-builds-for-apple-silicon)
     - [Installing TorchDevice](#installing-torchdevice)
+      - [NumPy and Apple Silicon](#numpy-and-apple-silicon)
   - [Usage](#usage)
     - [Important Notes](#important-notes)
   - [Demo Scripts](#demo-scripts)
@@ -77,17 +78,20 @@ pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/w
    pip install numpy psutil
    ```
 
+#### NumPy and Apple Silicon
+
    **IMPORTANT - For Apple Silicon, you will want a NumPY linked to the accelerate framework.**
-   This should always be done in the even NumPy gets downgraded or overlaid by another package, (SciPy), etc. The binaries as far as I can tell are not linked to the Apple Accelerate Framework, and NumPy does a lot of heavy lifting for PyTorch.
+   This should always be done in the even NumPy gets downgraded or overlaid by another package, (SciPy), etc. The binaries as far as I can tell are not linked to the Apple Accelerate Framework, and NumPy does a lot of heavy lifting for PyTorch. Doing this can result in about an 8x performance improvement for vector operations.
 
    Here is the way you can ensure NumPy is linked properly for your machine;
 
    ```bash
     # NumPy Rebuild with Pip
     CFLAGS="-I/System/Library/Frameworks/vecLib.framework/Headers -Wl,-framework -Wl,Accelerate -framework Accelerate" pip install numpy==1.26.* --force-reinstall --no-deps --no-cache --no-binary :all: --compile -Csetup-args=-Dblas=accelerate -Csetup-args=-Dlapack=accelerate -Csetup-args=-Duse-ilp64=true
-  ```
 
    ```
+
+
 4. **Install TorchDevice Module**
 
    Since `TorchDevice` is a single Python file, you can copy `TorchDevice.py` to your project's directory or install it as a package:
@@ -123,7 +127,6 @@ device = torch.device('cuda')  # This will be redirected based on available hard
   - If neither is available, it will default to CPU.
 - **Logging**: The module outputs log messages indicating how calls are intercepted and handled. These messages include the caller's filename, function name, and line number.
 - **Unsupported Functions**: Functions that are not supported on the current hardware are stubbed and will log a warning but allow execution to continue.
-
 
 ## Demo Scripts
 
