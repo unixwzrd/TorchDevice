@@ -77,6 +77,17 @@ pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/w
    pip install numpy psutil
    ```
 
+   **IMPORTANT - For Apple Silicon, you will want a NumPY linked to the accelerate framework.**
+   This should always be done in the even NumPy gets downgraded or overlaid by another package, (SciPy), etc. The binaries as far as I can tell are not linked to the Apple Accelerate Framework, and NumPy does a lot of heavy lifting for PyTorch.
+
+   Here is the way you can ensure NumPy is linked properly for your machine;
+
+   ```bash
+    # NumPy Rebuild with Pip
+    CFLAGS="-I/System/Library/Frameworks/vecLib.framework/Headers -Wl,-framework -Wl,Accelerate -framework Accelerate" pip install numpy==1.26.* --force-reinstall --no-deps --no-cache --no-binary :all: --compile -Csetup-args=-Dblas=accelerate -Csetup-args=-Dlapack=accelerate -Csetup-args=-Duse-ilp64=true
+  ```
+
+   ```
 4. **Install TorchDevice Module**
 
    Since `TorchDevice` is a single Python file, you can copy `TorchDevice.py` to your project's directory or install it as a package:
