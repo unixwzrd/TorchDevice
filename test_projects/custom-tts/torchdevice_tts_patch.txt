@@ -1,0 +1,47 @@
+
+# Add this to TorchDevice.py in the apply_patches method
+
+# Patch torch.serialization._get_restore_location for TTS compatibility
+original_get_restore_location = torch.serialization._get_restore_location
+
+def patched_get_restore_location(map_location):
+    # Create a simple restore function that ignores location
+    def restore_location(storage, location):
+        return storage
+    
+    return restore_location
+
+torch.serialization._get_restore_location = patched_get_restore_location
+
+# Patch TTS synthesis module if it's available
+try:
+    from TTS.tts.utils import synthesis
+    
+    # Store the original numpy_to_torch function
+    original_numpy_to_torch = synthesis.numpy_to_torch
+    
+    # Define a patched version
+    def patched_numpy_to_torch(np_array, dtype, device=None):
+        # Handle None input
+        if np_array is None:
+            return None
+        
+        # Create tensor on CPU first
+        tensor = torch.as_tensor(np_array, dtype=dtype, device='cpu')
+        
+        # Then move to the requested device if specified
+        if device is not None:
+            # If device is 'cuda', check if MPS is available
+            if device == 'cuda' and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+                device = 'mps'
+            
+            # Move tensor to the appropriate device
+            tensor = tensor.to(device)
+        
+        return tensor
+    
+    # Apply the patch
+    synthesis.numpy_to_torch = patched_numpy_to_torch
+except ImportError:
+    # TTS is not installed, so no need to patch
+    pass

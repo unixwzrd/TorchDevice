@@ -3,7 +3,7 @@
 # just to tsee what's going on in TorchDevoce
 
 import torch
-import torchdevice
+import TorchDevice
 
 device = torch.device('cuda')
 print("Device: ", device)

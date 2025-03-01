@@ -4,7 +4,7 @@
 
 import sys
 sys.path.insert(0, '../pylib')
-import torchdevice
+import TorchDevice
 import torch
 
 device = torch.device('cuda')

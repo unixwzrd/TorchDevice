@@ -2,7 +2,7 @@
 
 # Demo 1: Basic Tensor Computation
 
-import torchdevice
+import TorchDevice
 import torch
 import numpy as np
 

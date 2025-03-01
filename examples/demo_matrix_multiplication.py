@@ -2,7 +2,7 @@
 
 # Demo 2: Matrix Multiplication
 
-import torchdevice
+import TorchDevice
 import torch
 import numpy as np
 

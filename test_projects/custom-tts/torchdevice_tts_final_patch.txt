@@ -1,0 +1,17 @@
+
+# Add this to TorchDevice.py in the apply_patches method
+
+# Patch torch.serialization._get_restore_location to handle TorchDevice objects
+original_get_restore_location = torch.serialization._get_restore_location
+
+def patched_get_restore_location(map_location):
+    # Handle device objects by checking for attributes instead of using isinstance
+    if hasattr(map_location, 'type') and hasattr(map_location, 'index'):
+        def restore_location(storage, location):
+            return storage
+        return restore_location
+    
+    # Handle other cases with the original function
+    return original_get_restore_location(map_location)
+
+torch.serialization._get_restore_location = patched_get_restore_location

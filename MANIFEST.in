@@ -11,7 +11,7 @@ include requirements.txt
 include setup.py
 
 # Include all Python files in the main module directory
-recursive-include your_module *.py
+recursive-include TorchDevice *.py
 
 # Include all example programs
 recursive-include examples *.py

@@ -1,0 +1,50 @@
+---
+description: Comparing commands between Tensor Packages
+globs: .py
+---
+
+# Documents to refer to for conversion and inclusion
+
+- Use @<https://pytorch.org/docs/stable/index.html>
+
+## We are developing and testing a new python module in the project directory @TorchDevice/TorchDevice.py
+
+- This library is **NEVER*** called directly, but hooks into PyTorch and redirects the calls to the appropriate location.
+  - IF the hardware has CUDA, pass through the CUDA calls directly to PyTorch
+  - If the hardware has MPS, pass through the MPS calls directly to PyTorch
+  - If there is no CUDA or MPS available fall back to CPU
+- Migration tool for migrating CUDA code to MPS or MPS code to CUDA
+  - If the code is written for CUDA, and running on and MPS device, it should redirect CUDA calls to MPS.
+  - If the code is written for MOS, and running on and CUDA device, it should redirect MPS calls to CUDA.
+- This library is simple to use and should just be imported into any code and "just work"
+  - When a call is made for the wrong device a warning is displayed identifying the location for code to be changes.
+  - Hooking it into the PyTorch package and intercepting the calls, it should be transparent to the developer or user.
+  - This Library, Object, Class, or any other portion of TorchDevice should lever be called directly.
+  - TorchDevice should never be called directly, it should present an interface identical to PyTorch.
+
+- After making changes to TorchDevice.py we must re-install it in our Virtual Environment with the following command:
+
+```bash
+tests/run_tests_and_install.py
+```
+
+- We will test Real repository projects from GitHub in the directory  @TorchDevice/test_projects
+- If we find any cases which are not being handled by TorchDevice  during testing, we can fix them by making changes to TorchDevice.py
+- Then reinstall into the current virtual environment with the following command:
+
+- In any project use `impotrt TorchDevice` and it will hook itself into PyTorch or Torch.
+- **There is never any need to make calls to TorchDevice Directly**
+- **NO APPLICATION SPECIFIC PATCHES OR CHANGES TO BE MADE TO TorchDevice**
+
+We need to refactor.
+We need to reduce the size of the code somehow
+We need to make it self-contained, not relying on external variables
+Torch device will detect what hardware it is running on and if there is a choice it will let the user decide from available hardware.
+Sometimes we may want to use CPU for performance comparison over MPS or CUDA.
+It should intercept CUDA calls and CUDA device types and replace them with MPS when an MPS device exists.
+It should replace MPS device types with CUDS if it exists.
+It should ultimately fall back to CPU if neither are available.
+
+The programmer/developer/user, should not have to do anything extra or call TorchDevice themselves
+Torch device is for migrating programs written for one hardware type to another
+TorchDevice should only have to be imported to hook into the Torch framework.

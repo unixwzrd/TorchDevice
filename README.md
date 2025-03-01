@@ -1,6 +1,6 @@
 # TorchDevice *WIP*`
 
-TorchDevice is a class in the torchdevice.py package that intercepts PyTorch calls related to GPU hardware, enabling transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware. It allows developers to write code that works seamlessly on both hardware types without modification and is meant to assist in porting code from CUDA to MPS.
+TorchDevice is a class in the TorchDevice.py package that intercepts PyTorch calls related to GPU hardware, enabling transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware. It allows developers to write code that works seamlessly on both hardware types without modification and is meant to assist in porting code from CUDA to MPS.
 
 ## Table of Contents
 
@@ -15,9 +15,12 @@ TorchDevice is a class in the torchdevice.py package that intercepts PyTorch cal
       - [NumPy and Apple Silicon](#numpy-and-apple-silicon)
   - [Usage](#usage)
     - [Important Notes](#important-notes)
+  - [Usage with Optimizers](#usage-with-optimizers)
   - [Demo Scripts](#demo-scripts)
   - [Limitations](#limitations)
+  - [Recent Updates](#recent-updates)
   - [Contributing](#contributing)
+  - [Consider supporting the development of this project](#consider-supporting-the-development-of-this-project)
   - [License](#license)
 
 ## Features
@@ -85,12 +88,15 @@ pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/w
 
    Here is the way you can ensure NumPy is linked properly for your machine;
 
+   **NOTE: This command line may not be up to date, check the [VenvUtil](https://github.com/unixwzrd/VenvUtil) project for the latest version.**
    ```bash
     # NumPy Rebuild with Pip
-    CFLAGS="-I/System/Library/Frameworks/vecLib.framework/Headers -Wl,-framework -Wl,Accelerate -framework Accelerate" pip install numpy==1.26.* --force-reinstall --no-deps --no-cache --no-binary :all: --compile -Csetup-args=-Dblas=accelerate -Csetup-args=-Dlapack=accelerate -Csetup-args=-Duse-ilp64=true
-
+    PATH="/usr/bin:${PATH}" CFLAGS="-I/System/Library/Frameworks/vecLib.framework/Headers -fno-strict-aliasing -DHAVE_BLAS_ILP64 -DACCELERATE_NEW_LAPACK=1 -DACCELERATE_LAPACK_ILP64=1" pip install numpy=="$VERSION" --force-reinstall --no-deps --no-cache --no-binary :all: --no-build-isolation --compile -Csetup-args=-Dblas=accelerate -Csetup-args=-Dlapack=accelerate -Csetup-args=-Duse-ilp64=true
    ```
 
+There are additional tools for handling Python Virtual Environments as well as recompiling NumPy to ensure it is linked to the Accelerate Framework.
+
+[VenvUtil - Virtual Environment Utility](https://github.com/unixwzrd/VenvUtil)
 
 4. **Install TorchDevice Module**
 
@@ -111,7 +117,7 @@ pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/w
 Import `TorchDevice` in your code before or after importing `torch`. The module will automatically apply patches to intercept and redirect PyTorch calls.
 
 ```python
-import torchdevice  # import torchdevice to apply patches
+import TorchDevice  # import TorchDevice to apply patches
 import torch
 
 device = torch.device('cuda')  # This will be redirected based on available hardware
@@ -127,6 +133,29 @@ device = torch.device('cuda')  # This will be redirected based on available hard
   - If neither is available, it will default to CPU.
 - **Logging**: The module outputs log messages indicating how calls are intercepted and handled. These messages include the caller's filename, function name, and line number.
 - **Unsupported Functions**: Functions that are not supported on the current hardware are stubbed and will log a warning but allow execution to continue.
+
+## Usage with Optimizers
+
+TorchDevice now works seamlessly with PyTorch optimizers without any special configuration. Here's a simple example:
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from TorchDevice import TorchDevice
+
+# Get the available device
+device = TorchDevice()
+print(f"Using device: {device}")
+
+# Create a model and move it to the device
+model = nn.Linear(10, 2).to(device.device)
+
+# Create a simple optimizer
+optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+# Training loop works as expected
+# ...
 
 ## Demo Scripts
 
@@ -147,9 +176,29 @@ Ensure these scripts are updated with any changes you've made to `TorchDevice.py
 - **Partial CUDA Functionality**: While many CUDA functions are mocked, some functionality cannot be fully replicated on MPS hardware.
 - **Performance Considerations**: Mocked functions may not reflect actual hardware performance or capabilities.
 
+## Recent Updates
+
+The TorchDevice implementation has been simplified to ensure seamless compatibility between CUDA and MPS devices without requiring any special handling for optimizers or disabling the PyTorch compiler.
+
+Key improvements:
+- Removed the need to disable PyTorch compiler and inductor
+- Simplified Event and Stream class implementations
+- Reduced the number of patched functions to the essential minimum
+- Fixed compatibility issues with PyTorch optimizers
+
 ## Contributing
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss potential changes or improvements.
+
+## Consider supporting the development of this project
+
+If you find this useful please consider donating or sponsoring this project to help support continued development. You may do so at the following link:
+
+[unizwzrd Patreon](https://www.patreon.com/unizwzrd)
+[unixwzrd Ko-Fi](https://ko-fi.com/unixwzrd)
+[unixwzrd Buy Me a Coffee](https://www.buymeacoffee.com/unixwzrd)
+
+Your support is greatly appreciated!
 
 ## License
 
@@ -157,7 +206,7 @@ Contributions are welcome! Please submit a pull request or open an issue to disc
 This project is licensed under the Apache License
                            Version 2.0, License.
 
- Copyright 2024 Michael P. Sullivan - unixwzrd@unixwzrd.ai
+ Copyright 2025 Michael P. Sullivan - unixwzrd@unixwzrd.ai
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

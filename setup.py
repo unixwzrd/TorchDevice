@@ -1,15 +1,15 @@
 # setup.py
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
-    name='torchdevice',
+    name='TorchDevice',
     version='1.0.0',
     description='Intercepts PyTorch calls to enable transparent code portability between CUDA and MPS hardware.',
     author='unixwzrd',
     author_email='unixwzrd@unixwzrd.ai',
     url='https://github.com/unixwzrd/TorchDevice',
-    packages=find_packages(),
+    packages=['TorchDevice'],
     install_requires=[
         'torch>=2.2',
         'numpy',

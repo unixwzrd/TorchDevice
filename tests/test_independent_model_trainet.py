@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import torch
-import torchdevice  # Ensure this module is imported to apply patches
+import TorchDevice  # Ensure this module is imported to apply patches
 from test_submodule import ModelTrainer
 
 def main():
