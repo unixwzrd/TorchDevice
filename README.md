@@ -1,10 +1,10 @@
-# TorchDevice *WIP*`
+# TorchDevice
 
-TorchDevice is a class in the TorchDevice.py package that intercepts PyTorch calls related to GPU hardware, enabling transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware. It allows developers to write code that works seamlessly on both hardware types without modification and is meant to assist in porting code from CUDA to MPS.
+TorchDevice is a Python library that enables transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware for PyTorch applications. It intercepts PyTorch calls related to GPU hardware, allowing developers to write code that works seamlessly on both hardware types without modification. TorchDevice is designed to assist in porting code from CUDA to MPS and vice versa, making it easier to develop cross-platform PyTorch applications.
 
 ## Table of Contents
 
-- [TorchDevice *WIP*\`](#torchdevice-wip)
+- [TorchDevice](#torchdevice)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Installation](#installation)
@@ -19,17 +19,24 @@ TorchDevice is a class in the TorchDevice.py package that intercepts PyTorch cal
   - [Demo Scripts](#demo-scripts)
   - [Limitations](#limitations)
   - [Recent Updates](#recent-updates)
+    - [March 2025 Updates](#march-2025-updates)
+      - [Stream and Event Handling](#stream-and-event-handling)
+      - [PyTorch Compatibility](#pytorch-compatibility)
+      - [Code Quality](#code-quality)
+    - [Upcoming Changes](#upcoming-changes)
   - [Contributing](#contributing)
-  - [Consider supporting the development of this project](#consider-supporting-the-development-of-this-project)
+  - [Supporting the development of this project](#supporting-the-development-of-this-project)
   - [License](#license)
 
 ## Features
 
 - **Automatic Device Redirection**: Intercepts `torch.device` instantiation and redirects it based on available hardware (CUDA, MPS, or CPU).
 - **Mocked CUDA Functions**: Provides mocked implementations of CUDA-specific functions, enabling code that uses CUDA functions to run on MPS hardware.
+- **Stream and Event Support**: Implements full support for CUDA streams and events on MPS devices, allowing for asynchronous operations and event timing.
 - **Unified Memory Handling**: Handles differences in memory management between CUDA and MPS, providing reasonable values for memory-related functions.
 - **Logging and Debugging**: Outputs informative log messages indicating how calls are intercepted and handled, assisting in code migration and debugging.
 - **Transparent Integration**: Works transparently without requiring changes to existing codebases.
+- **PyTorch Compiler Compatibility**: Works seamlessly with PyTorch's dynamo compiler and inductor.
 
 ## Installation
 
@@ -89,6 +96,7 @@ pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/w
    Here is the way you can ensure NumPy is linked properly for your machine;
 
    **NOTE: This command line may not be up to date, check the [VenvUtil](https://github.com/unixwzrd/VenvUtil) project for the latest version.**
+
    ```bash
     # NumPy Rebuild with Pip
     PATH="/usr/bin:${PATH}" CFLAGS="-I/System/Library/Frameworks/vecLib.framework/Headers -fno-strict-aliasing -DHAVE_BLAS_ILP64 -DACCELERATE_NEW_LAPACK=1 -DACCELERATE_LAPACK_ILP64=1" pip install numpy=="$VERSION" --force-reinstall --no-deps --no-cache --no-binary :all: --no-build-isolation --compile -Csetup-args=-Dblas=accelerate -Csetup-args=-Dlapack=accelerate -Csetup-args=-Duse-ilp64=true
@@ -114,15 +122,16 @@ There are additional tools for handling Python Virtual Environments as well as r
 
 ## Usage
 
-Import `TorchDevice` in your code before or after importing `torch`. The module will automatically apply patches to intercept and redirect PyTorch calls.
+Import `TorchDevice` in your code before importing `torch`. The module will automatically apply patches to intercept and redirect PyTorch calls.
 
 ```python
-import TorchDevice  # import TorchDevice to apply patches
+import TorchDevice  # Import TorchDevice first to apply patches
 import torch
 
 device = torch.device('cuda')  # This will be redirected based on available hardware
+# For example, on Apple Silicon without CUDA, this will be redirected to MPS
 
-# Your existing PyTorch code
+# Your existing PyTorch code works without modification
 ```
 
 ### Important Notes
@@ -132,7 +141,10 @@ device = torch.device('cuda')  # This will be redirected based on available hard
   - If MPS is requested but not available, it will redirect to CUDA if available.
   - If neither is available, it will default to CPU.
 - **Logging**: The module outputs log messages indicating how calls are intercepted and handled. These messages include the caller's filename, function name, and line number.
+- **Verbosity Control**: You can control the verbosity of logging by setting the `TORCHDEVICE_LOG_VERBOSITY` environment variable (0=minimal, 1=verbose, 2=debug).
+- **Log File**: You can direct logs to a file by setting the `TORCHDEVICE_LOG_FILE` environment variable.
 - **Unsupported Functions**: Functions that are not supported on the current hardware are stubbed and will log a warning but allow execution to continue.
+- **Stream and Event Support**: CUDA streams and events are fully supported on MPS devices, allowing for asynchronous operations and event timing.
 
 ## Usage with Optimizers
 
@@ -155,7 +167,7 @@ model = nn.Linear(10, 2).to(device.device)
 optimizer = optim.SGD(model.parameters(), lr=0.01)
 
 # Training loop works as expected
-# ...
+```
 
 ## Demo Scripts
 
@@ -167,7 +179,7 @@ You can include the demo scripts provided earlier in your project to showcase ho
 - `demo_unsupported_functions.py`
 - `demo_device_info.py`
 
-Ensure these scripts are updated with any changes you've made to `TorchDevice.py`.
+Ensure these scripts are updated with any changes you made to `TorchDevice.py`.
 
 ## Limitations
 
@@ -175,22 +187,64 @@ Ensure these scripts are updated with any changes you've made to `TorchDevice.py
 - **Multiple Devices on MPS**: MPS does not support multiple devices. Calls to set or get devices will be redirected appropriately.
 - **Partial CUDA Functionality**: While many CUDA functions are mocked, some functionality cannot be fully replicated on MPS hardware.
 - **Performance Considerations**: Mocked functions may not reflect actual hardware performance or capabilities.
+- **Tensor Creation**: Direct tensor creation operations using CUDA may still fail on MPS as not all CUDA operations have direct MPS equivalents. This is a limitation of the underlying PyTorch implementation rather than TorchDevice.
 
 ## Recent Updates
 
-The TorchDevice implementation has been simplified to ensure seamless compatibility between CUDA and MPS devices without requiring any special handling for optimizers or disabling the PyTorch compiler.
+### March 2025 Updates
 
-Key improvements:
-- Removed the need to disable PyTorch compiler and inductor
-- Simplified Event and Stream class implementations
-- Reduced the number of patched functions to the essential minimum
-- Fixed compatibility issues with PyTorch optimizers
+The TorchDevice library has undergone significant improvements to ensure seamless compatibility between CUDA and MPS devices:
+
+#### Stream and Event Handling
+
+- **Enhanced Stream Support**: Implemented comprehensive CUDA stream functionality on MPS devices, including:
+  - Basic stream operations (query, synchronize)
+  - Context manager support with `__enter__` and `__exit__` methods
+  - Stream event handling capabilities
+  - Wait event and wait stream functionality
+- **Improved Event Handling**: Fixed CUDA events handling to ensure proper redirection to MPS:
+  - Added robust implementation for the `elapsed_time` method on MPS events
+  - Improved the record method to properly handle stream parameters
+  - Fixed synchronization and timing issues
+
+#### PyTorch Compatibility
+
+- **PyTorch Dynamo Support**: Ensured compatibility with PyTorch's dynamo compiler by implementing proper inheritance from base classes
+- **Optimizer Compatibility**: Fixed compatibility issues with PyTorch optimizers
+- **Reduced Patching**: Minimized the number of patched functions to the essential minimum
+
+#### Code Quality
+
+- **Proper Inheritance**: Implemented proper inheritance for Stream and Event classes from PyTorch's base classes
+- **Improved Error Handling**: Added better error handling and logging for debugging
+- **Test Coverage**: Added comprehensive tests for stream and event functionality
+
+### Upcoming Changes
+
+We're planning a major refactoring of the TorchDevice codebase to improve maintainability and extensibility:
+
+- **Modular Architecture**: Breaking down the large single file into smaller, focused modules
+- **Improved Testing**: Adding more unit tests for individual components
+- **Better Documentation**: Enhancing documentation with examples and API references
+- **Enhanced Logging**: Implementing more detailed and configurable logging
 
 ## Contributing
 
-Contributions are welcome! Please submit a pull request or open an issue to discuss potential changes or improvements.
+Contributions are welcome! Here's how you can contribute:
 
-## Consider supporting the development of this project
+1. **Report Issues**: If you encounter any bugs or have feature requests, please open an issue.
+2. **Submit Pull Requests**: Feel free to submit pull requests for bug fixes or new features.
+3. **Improve Documentation**: Help improve the documentation by fixing errors or adding examples.
+4. **Test on Different Hardware**: Test TorchDevice on different hardware configurations and report your findings.
+
+Please follow these guidelines when contributing:
+
+- Follow the existing code style
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting a pull request
+
+## Supporting the development of this project
 
 If you find this useful please consider donating or sponsoring this project to help support continued development. You may do so at the following link:
 
@@ -203,20 +257,20 @@ Your support is greatly appreciated!
 ## License
 
 ```text
-This project is licensed under the Apache License
-                           Version 2.0, License.
+  This project is licensed under the Apache License
+                  Version 2.0, License.
 
- Copyright 2025 Michael P. Sullivan - unixwzrd@unixwzrd.ai
+  Copyright 2025 Michael P. Sullivan - unixwzrd@unixwzrd.ai
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+      http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 ```
