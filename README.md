@@ -141,7 +141,6 @@ device = torch.device('cuda')  # This will be redirected based on available hard
   - If MPS is requested but not available, it will redirect to CUDA if available.
   - If neither is available, it will default to CPU.
 - **Logging**: The module outputs log messages indicating how calls are intercepted and handled. These messages include the caller's filename, function name, and line number.
-- **Verbosity Control**: You can control the verbosity of logging by setting the `TORCHDEVICE_LOG_VERBOSITY` environment variable (0=minimal, 1=verbose, 2=debug).
 - **Log File**: You can direct logs to a file by setting the `TORCHDEVICE_LOG_FILE` environment variable.
 - **Unsupported Functions**: Functions that are not supported on the current hardware are stubbed and will log a warning but allow execution to continue.
 - **Stream and Event Support**: CUDA streams and events are fully supported on MPS devices, allowing for asynchronous operations and event timing.

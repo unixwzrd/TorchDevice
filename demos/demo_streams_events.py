@@ -12,9 +12,6 @@ import time
 import TorchDevice  # Import TorchDevice first to apply patches
 import torch
 
-# Set verbosity level for more detailed logging
-os.environ["TORCHDEVICE_LOG_VERBOSITY"] = "1"
-
 def print_separator(title):
     """Print a separator with a title."""
     print("\n" + "=" * 80)

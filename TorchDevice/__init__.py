@@ -1,11 +1,13 @@
 """
-TorchDevice: A package for seamless PyTorch device management
+TorchDevice library for managing PyTorch device operations.
 """
 
-# Import the main TorchDevice class
+__version__ = '0.0.2'
+
 from .TorchDevice import TorchDevice
+from .modules.TDLogger import log_message
 
-# Apply patches to make CUDA functions work on MPS
-TorchDevice.apply_patches()
+# Create a singleton instance
+torch_device = TorchDevice()
 
-__all__ = ['TorchDevice']
+__all__ = ['TorchDevice', 'torch_device', 'log_message', '__version__']

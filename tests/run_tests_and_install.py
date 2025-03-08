@@ -3,60 +3,90 @@
 Script to run TorchDevice tests, build, and install.
 
 This script:
-1. Runs all tests in the tests directory
+1. Runs all tests in the tests directory or specific tests if provided
 2. If tests pass, optionally builds the package
 3. Optionally installs the package in development mode
 
 Usage:
-    python run_tests_and_install.py             # Run tests, build, and install
-    python run_tests_and_install.py --test-only # Run only tests
-    python run_tests_and_install.py --help      # Show help message
+    python run_tests_and_install.py                        # Run all tests, build, and install
+    python run_tests_and_install.py --test-only            # Run only all tests
+    python run_tests_and_install.py --update-expected      # Update expected log output files
+    python run_tests_and_install.py tests/test_file.py     # Run specific test(s)
 """
 
 import os
 import sys
 import subprocess
 import logging
-import unittest
-import time
 import argparse
+import time
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Prevent duplicate logging from TorchDevice
-logging.getLogger("TorchDevice").propagate = False
 
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
 
-def run_tests():
-    """Run all tests in the tests directory."""
-    logger.info("Running TorchDevice tests...")
+def run_test(test_path, update_expected=False):
+    """
+    Run a single test file or directory.
     
-    # Create a test loader
-    loader = unittest.TestLoader()
+    Args:
+        test_path: Path to the test file or directory
+        update_expected: Whether to update expected output files
     
-    # Load tests from the tests directory
-    test_suite = loader.discover(str(PROJECT_ROOT / 'tests'), pattern='test_*.py')
+    Returns:
+        True if the test passed, False otherwise
+    """
+    # Convert to Path object if it's a string
+    test_path = Path(test_path)
     
-    # Run the tests
-    test_runner = unittest.TextTestRunner(verbosity=2)
-    result = test_runner.run(test_suite)
+    # Set environment variable for update_expected
+    env = os.environ.copy()
+    env['UPDATE_EXPECTED_OUTPUT'] = '1' if update_expected else '0'
     
-    # Check if all tests passed
-    if result.wasSuccessful():
-        logger.info("✅ All tests passed!")
-        return True
+    # Determine the command to run
+    if test_path.is_file():
+        # Run a specific test file
+        cmd = [sys.executable, str(test_path)]
+        if update_expected:
+            cmd.append('--update-expected')
     else:
-        logger.error("❌ Tests failed!")
-        return False
+        # For directories, find all test files and run them individually
+        # This ensures consistent environment variable handling
+        logger.info(f"Discovering tests in: {test_path}")
+        all_passed = True
+        
+        # Find all Python files that start with "test_"
+        test_files = list(test_path.glob("**/test_*.py"))
+        if not test_files:
+            logger.warning(f"No test files found in {test_path}")
+            return True
+        
+        logger.info(f"Found {len(test_files)} test files")
+        
+        # Run each test file individually
+        for test_file in test_files:
+            logger.info(f"Running test file: {test_file}")
+            file_cmd = [sys.executable, str(test_file)]
+            if update_expected:
+                file_cmd.append('--update-expected')
+            
+            process = subprocess.run(file_cmd, env=env)
+            if process.returncode != 0:
+                all_passed = False
+        
+        return all_passed
+    
+    # Run the test
+    logger.info(f"Running test: {test_path}")
+    process = subprocess.run(cmd, env=env)
+    
+    # Return True if the test passed
+    return process.returncode == 0
 
 
 def build_package():
@@ -72,12 +102,10 @@ def build_package():
     
     # Check if the build was successful
     if build_process.returncode == 0:
-        logger.info(build_process.stdout)
         logger.info("✅ Package built successfully!")
         return True
     else:
-        logger.error(build_process.stderr)
-        logger.error("❌ Package build failed!")
+        logger.error(f"❌ Package build failed: {build_process.stderr}")
         return False
 
 
@@ -94,31 +122,24 @@ def install_package():
     
     # Check if the installation was successful
     if install_process.returncode == 0:
-        logger.info(install_process.stdout)
         logger.info("✅ Package installed successfully!")
         return True
     else:
-        logger.error(install_process.stderr)
-        logger.error("❌ Package installation failed!")
+        logger.error(f"❌ Package installation failed: {install_process.stderr}")
         return False
-
-
-def parse_arguments():
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description='Run TorchDevice tests, build, and install.'
-    )
-    parser.add_argument(
-        '--test-only', 
-        action='store_true',
-        help='Run only tests without building and installing'
-    )
-    return parser.parse_args()
 
 
 def main():
     """Main function to run tests, build, and install."""
-    args = parse_arguments()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run TorchDevice tests, build, and install')
+    parser.add_argument('--test-only', action='store_true',
+                        help='Run only tests without building and installing')
+    parser.add_argument('--update-expected', action='store_true',
+                        help='Update expected log output files')
+    parser.add_argument('test_paths', nargs='*',
+                        help='Specific test files or directories to run')
+    args = parser.parse_args()
     
     start_time = time.time()
     
@@ -126,11 +147,24 @@ def main():
     logger.info("Starting TorchDevice test, build, and install process")
     logger.info("=" * 80)
     
-    # Run tests
-    tests_passed = run_tests()
+    # If no test paths are provided, run all tests
+    if not args.test_paths:
+        test_paths = [PROJECT_ROOT / 'tests']
+    else:
+        test_paths = [PROJECT_ROOT / path for path in args.test_paths]
+        # Force test-only mode if specific tests are provided
+        if not args.test_only:
+            logger.info("Forcing test-only mode since specific tests were provided.")
+            args.test_only = True
+    
+    # Run each test
+    all_passed = True
+    for test_path in test_paths:
+        if not run_test(test_path, args.update_expected):
+            all_passed = False
     
     # If tests passed and not in test-only mode, build and install
-    if tests_passed and not args.test_only:
+    if all_passed and not args.test_only:
         # Build the package
         build_success = build_package()
         
@@ -143,7 +177,7 @@ def main():
         else:
             logger.error("Failed to build the package.")
             return 1
-    elif not tests_passed:
+    elif not all_passed:
         logger.error("Tests failed. Skipping build and install.")
         return 1
     elif args.test_only:
@@ -153,10 +187,10 @@ def main():
     elapsed_time = end_time - start_time
     
     logger.info("=" * 80)
-    logger.info(f"TorchDevice test, build, and install process completed in {elapsed_time:.2f} seconds")
+    logger.info(f"TorchDevice process completed in {elapsed_time:.2f} seconds")
     logger.info("=" * 80)
     
-    return 0
+    return 0 if all_passed else 1
 
 
 if __name__ == "__main__":

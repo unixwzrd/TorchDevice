@@ -296,3 +296,5 @@ $RECYCLE.BIN/
 test_projects/cuda-pytorch-template
 .project-planning/
 test_projects/
+backup/
+*.bak*
