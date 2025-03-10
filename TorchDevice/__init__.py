@@ -2,7 +2,7 @@
 TorchDevice library for managing PyTorch device operations.
 """
 
-__version__ = '0.0.3'
+__version__ = '0.0.5'
 
 from .TorchDevice import TorchDevice
 from .modules.TDLogger import log_message
