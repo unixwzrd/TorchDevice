@@ -34,7 +34,7 @@ class TestCPUOperations(PrefixedTestCase):
         self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)   
 
         # Set device to CPU for these tests
-        self.device = torch.device('cpu')
+        self.device = torch.device('cpu:-1')
         self.info("Using device: %s", self.device)
 
     def tearDown(self):

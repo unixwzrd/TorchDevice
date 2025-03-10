@@ -2,6 +2,8 @@
 
 TorchDevice is a Python library that enables transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware for PyTorch applications. It intercepts PyTorch calls related to GPU hardware, allowing developers to write code that works seamlessly on both hardware types without modification. TorchDevice is designed to assist in porting code from CUDA to MPS and vice versa, making it easier to develop cross-platform PyTorch applications.
 
+The primary goal of this project for now is to be able to get HuggingFace Transformers working on Apple Silicon.
+
 ## Table of Contents
 
 - [TorchDevice](#torchdevice)
@@ -15,11 +17,13 @@ TorchDevice is a Python library that enables transparent code portability betwee
       - [NumPy and Apple Silicon](#numpy-and-apple-silicon)
   - [Usage](#usage)
     - [Important Notes](#important-notes)
+    - [CPU Override Feature](#cpu-override-feature)
   - [Usage with Optimizers](#usage-with-optimizers)
   - [Demo Scripts](#demo-scripts)
   - [Limitations](#limitations)
   - [Recent Updates](#recent-updates)
     - [March 2025 Updates](#march-2025-updates)
+      - [CPU Override Feature](#cpu-override-feature-1)
       - [Improved Logging System](#improved-logging-system)
       - [Stream and Event Handling](#stream-and-event-handling)
       - [PyTorch Compatibility](#pytorch-compatibility)
@@ -32,6 +36,7 @@ TorchDevice is a Python library that enables transparent code portability betwee
 ## Features
 
 - **Automatic Device Redirection**: Intercepts `torch.device` instantiation and redirects it based on available hardware (CUDA, MPS, or CPU).
+- **Explicit CPU Override**: Provides a special `'cpu:-1'` device specification to force CPU usage regardless of available accelerators.
 - **Mocked CUDA Functions**: Provides mocked implementations of CUDA-specific functions, enabling code that uses CUDA functions to run on MPS hardware.
 - **Stream and Event Support**: Implements full support for CUDA streams and events on MPS devices, allowing for asynchronous operations and event timing.
 - **Unified Memory Handling**: Handles differences in memory management between CUDA and MPS, providing reasonable values for memory-related functions.
@@ -126,7 +131,7 @@ There are additional tools for handling Python Virtual Environments as well as r
 Import `TorchDevice` in your code before importing `torch`. The module will automatically apply patches to intercept and redirect PyTorch calls.
 
 ```python
-import TorchDevice  # Import TorchDevice first to apply patches
+import TorchDevice  # Import in any order.
 import torch
 
 device = torch.device('cuda')  # This will be redirected based on available hardware
@@ -145,6 +150,33 @@ device = torch.device('cuda')  # This will be redirected based on available hard
 - **Log File**: You can direct logs to a file by setting the `TORCHDEVICE_LOG_FILE` environment variable.
 - **Unsupported Functions**: Functions that are not supported on the current hardware are stubbed and will log a warning but allow execution to continue.
 - **Stream and Event Support**: CUDA streams and events are fully supported on MPS devices, allowing for asynchronous operations and event timing.
+
+### CPU Override Feature
+
+TorchDevice now supports explicitly forcing CPU usage regardless of available accelerators using the special `'cpu:-1'` device specification:
+
+```python
+import TorchDevice
+import torch
+
+# Force CPU usage regardless of available GPUs
+device = torch.device('cpu:-1')
+
+# All subsequent operations will use CPU
+tensor = torch.randn(5, 5)  # Will be created on CPU
+model = torch.nn.Linear(10, 5).to(device)  # Will be moved to CPU
+
+# Even explicit GPU requests will be redirected to CPU
+gpu_tensor = torch.randn(5, 5, device='cuda')  # Will still use CPU
+```
+
+This feature is useful for:
+- Debugging GPU code on CPU
+- Running specific operations on CPU while keeping others on GPU
+- Ensuring consistent behavior across different hardware environments
+- Benchmarking CPU vs GPU performance
+
+Once the CPU override is activated with `'cpu:-1'`, it will remain active for the duration of the Python process. All subsequent device creations will respect this override.
 
 ## Usage with Optimizers
 
@@ -193,7 +225,14 @@ Ensure these scripts are updated with any changes you made to `TorchDevice.py`.
 
 ### March 2025 Updates
 
-The TorchDevice library has undergone significant improvements to ensure seamless compatibility between CUDA and MPS devices:
+#### CPU Override Feature
+
+- **Added Explicit CPU Device Selection**:
+  - Implemented special `'cpu:-1'` device specification to force CPU usage regardless of available accelerators
+  - Added CPU override flag to ensure all subsequent operations respect explicit CPU selection
+  - Enhanced device redirection logic to recognize and honor CPU override requests
+  - Simplified device handling for better maintainability and reliability
+  - Improved testing infrastructure with dedicated test modules for CPU and MPS operations
 
 #### Improved Logging System
 

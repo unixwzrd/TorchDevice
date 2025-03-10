@@ -1,3 +1,33 @@
+"""
+TorchDevice - Transparent PyTorch Device Redirection
+
+This module enables seamless code portability between NVIDIA CUDA, Apple Silicon (MPS),
+and CPU hardware for PyTorch applications. It intercepts PyTorch calls related to GPU
+hardware, allowing developers to write code that works across different hardware
+without modification.
+
+Key features:
+- Automatic device redirection based on available hardware
+- CPU override capability using 'cpu:-1' device specification
+- Mocked CUDA functions for MPS and CPU compatibility
+- Stream and Event support across all device types
+- Unified memory handling and reporting
+- Detailed logging for debugging and migration assistance
+
+Usage:
+    import TorchDevice  # Import before torch to apply patches
+    import torch
+    
+    # Regular device selection (will be redirected based on available hardware)
+    device = torch.device('cuda')  # Redirects to MPS on Apple Silicon
+    
+    # Force CPU usage with the override feature
+    device = torch.device('cpu:-1')  # Forces CPU regardless of available GPUs
+    
+    # All subsequent operations respect the CPU override
+    tensor = torch.randn(5, 5)  # Will be created on CPU
+    model = torch.nn.Linear(10, 5).to('cuda')  # Still uses CPU due to override
+"""
 import os
 import threading
 import time
@@ -58,77 +88,121 @@ def module_cuda_replacement(self, device=None):
 def tensor_to_replacement(self, *args, **kwargs):
     default_device = get_default_device()
     device_arg = None
-    if args:
-        candidate = args[0]
-        # Check if candidate is a string or a torch.device instance (using the original type),
-        # and not a dtype. We use _ORIGINAL_TORCH_DEVICE_TYPE for the isinstance check.
-        if isinstance(candidate, (str, _ORIGINAL_TORCH_DEVICE_TYPE)) and (
-                not hasattr(candidate, '__module__') or 
-                (hasattr(candidate, '__module__') and candidate.__module__ != 'torch')
-            ):
-            device_arg = candidate
-            # Replace args with default device if requested device not available
-            if isinstance(candidate, str) and candidate != default_device:
-                args = (default_device,) + args[1:]
-            elif isinstance(candidate, _ORIGINAL_TORCH_DEVICE_TYPE) and candidate.type != default_device:
-                args = (default_device,) + args[1:]
+    
+    # Check for device in args
+    if args and len(args) > 0:
+        # The device is typically the first argument
+        device_arg = args[0]
+        
+        # Check for CPU override with 'cpu:-1'
+        if isinstance(device_arg, str) and device_arg == 'cpu:-1':
+            # Set CPU as the default device and enable override
+            with TorchDevice._lock:
+                TorchDevice._default_device = 'cpu'
+                TorchDevice._cpu_override = True
+            log_message("Explicitly overriding default device to CPU per user request", "tensor.to")
+            
+            # Replace with 'cpu:0' for the actual call
+            args_list = list(args)
+            args_list[0] = 'cpu:0'
+            args = tuple(args_list)
+        # If CPU override is active and CPU is requested, respect it
+        elif TorchDevice._cpu_override and isinstance(device_arg, str) and device_arg == 'cpu':
+            log_message("Respecting explicit CPU device request due to active CPU override", "tensor.to")
+            # Don't modify the arguments, let the original to() handle CPU device
+        # Otherwise, handle device redirection
+        elif isinstance(device_arg, str) and device_arg != default_device:
+            # Redirect to the default device
+            args_list = list(args)
+            args_list[0] = default_device
+            args = tuple(args_list)
+            log_message(f"Redirecting tensor.to() from '{device_arg}' to '{default_device}'", "tensor.to")
+    
+    # Check for device in kwargs
     elif 'device' in kwargs:
         device_arg = kwargs['device']
         
-        # Handle device redirection in kwargs
-        if isinstance(device_arg, str):
-            device_type = device_arg.split(':')[0] if ':' in device_arg else device_arg
-            if device_type != default_device:
-                if ':' in device_arg:
-                    index = device_arg.split(':')[1]
-                    kwargs['device'] = f"{default_device}:{index}"
-                else:
-                    kwargs['device'] = default_device
-                log_message(f"Redirecting tensor.to() from '{device_type}' to '{default_device}'.", "tensor.to")
-        elif hasattr(device_arg, 'type'):
-            device_type = device_arg.type
-            if device_type != default_device:
-                index = getattr(device_arg, 'index', 0)
-                if index is None:
-                    index = 0
-                kwargs['device'] = TorchDevice.torch_device_replacement(f"{default_device}:{index}")
-                log_message(f"Redirecting tensor.to() from '{device_type}' to '{default_device}'.", "tensor.to")
+        # Handle the special case for CPU override with "cpu:-1"
+        if isinstance(device_arg, str) and device_arg == 'cpu:-1':
+            # Set CPU as the default device and enable override
+            with TorchDevice._lock:
+                TorchDevice._default_device = 'cpu'
+                TorchDevice._cpu_override = True
+            log_message("Explicitly overriding default device to CPU per user request", "tensor.to")
+            
+            # Replace with 'cpu:0' for the actual call
+            kwargs['device'] = 'cpu:0'
+        # If CPU override is active and CPU is requested, respect it
+        elif TorchDevice._cpu_override and isinstance(device_arg, str) and device_arg == 'cpu':
+            log_message("Respecting explicit CPU device request due to active CPU override", "tensor.to")
+            # Don't modify the device, let the original to() handle it
+        # Otherwise, handle device redirection
+        elif isinstance(device_arg, str) and device_arg != default_device:
+            # Redirect to the default device
+            kwargs['device'] = default_device
+            log_message(f"Redirecting tensor.to() from '{device_arg}' to '{default_device}'", "tensor.to")
     
-    # Log warning if target device doesn't match default
-    if device_arg is not None:
-        if isinstance(device_arg, _ORIGINAL_TORCH_DEVICE_TYPE):
-            target_device = device_arg.type
-        elif isinstance(device_arg, str):
-            target_device = device_arg.split(':')[0]
-        else:
-            target_device = str(device_arg)
-        if target_device != default_device:
-            log_message(f"tensor.to() called with device {device_arg} which does not match the default device {default_device}.", "tensor.to")
+    # Log a message if the device doesn't match the default but we're not redirecting
+    if device_arg is not None and isinstance(device_arg, str) and device_arg != default_device:
+        # Only log if we haven't already redirected and it's not a CPU override case
+        if not (TorchDevice._cpu_override and device_arg == 'cpu'):
+            log_message(f"tensor.to() called with device {device_arg} which does not match the default device {default_device}", "tensor.to")
     
-    # Call the original to() with the redirected device
+    # Call the original to() with the potentially modified arguments
     return _original_tensor_to(self, *args, **kwargs)
 
 def module_to_replacement(self, *args, **kwargs):
     default_device = get_default_device()
     device_arg = None
-    if args:
-        candidate = args[0]
-        if isinstance(candidate, (str, _ORIGINAL_TORCH_DEVICE_TYPE)) and (
-                not hasattr(candidate, '__module__') or 
-                (hasattr(candidate, '__module__') and candidate.__module__ != 'torch')
-            ):
-            device_arg = candidate
+    
+    # Check for device in args
+    if args and len(args) > 0:
+        # The device is typically the first argument
+        device_arg = args[0]
+        
+        # Check for CPU override with 'cpu:-1'
+        if isinstance(device_arg, str) and device_arg == 'cpu:-1':
+            # Set CPU as the default device and enable override
+            with TorchDevice._lock:
+                TorchDevice._default_device = 'cpu'
+                TorchDevice._cpu_override = True
+            log_message("Explicitly overriding default device to CPU per user request", "module.to")
+            
+            # Replace with 'cpu:0' for the actual call
+            args_list = list(args)
+            args_list[0] = 'cpu:0'
+            args = tuple(args_list)
+        # If CPU override is active and CPU is requested, respect it
+        elif TorchDevice._cpu_override and isinstance(device_arg, str) and device_arg == 'cpu':
+            log_message("Respecting explicit CPU device request due to active CPU override", "module.to")
+            # Don't modify the arguments, let the original to() handle CPU device
+    
+    # Check for device in kwargs
     elif 'device' in kwargs:
         device_arg = kwargs['device']
-    if device_arg is not None:
-        if isinstance(device_arg, _ORIGINAL_TORCH_DEVICE_TYPE):
-            target_device = device_arg.type
-        elif isinstance(device_arg, str):
-            target_device = device_arg.split(':')[0]
-        else:
-            target_device = str(device_arg)
-        if target_device != default_device:
-            log_message(f"module.to() called with device {device_arg} which does not match the default device {default_device}.", "module.to")
+        
+        # Handle the special case for CPU override with "cpu:-1"
+        if isinstance(device_arg, str) and device_arg == 'cpu:-1':
+            # Set CPU as the default device and enable override
+            with TorchDevice._lock:
+                TorchDevice._default_device = 'cpu'
+                TorchDevice._cpu_override = True
+            log_message("Explicitly overriding default device to CPU per user request", "module.to")
+            
+            # Replace with 'cpu:0' for the actual call
+            kwargs['device'] = 'cpu:0'
+        # If CPU override is active and CPU is requested, respect it
+        elif TorchDevice._cpu_override and isinstance(device_arg, str) and device_arg == 'cpu':
+            log_message("Respecting explicit CPU device request due to active CPU override", "module.to")
+            # Don't modify the device, let the original to() handle it
+    
+    # Log a message if the device doesn't match the default but we're not redirecting
+    if device_arg is not None and isinstance(device_arg, str) and device_arg != default_device:
+        # Only log if it's not a CPU override case
+        if not (TorchDevice._cpu_override and device_arg == 'cpu'):
+            log_message(f"module.to() called with device {device_arg} which does not match the default device {default_device}", "module.to")
+    
+    # Call the original to() with the potentially modified arguments
     return _original_module_to(self, *args, **kwargs)
 
 torch.Tensor.cuda = tensor_cuda_replacement
@@ -185,6 +259,7 @@ if hasattr(torch.cuda, 'amp'):
 class TorchDevice:
     _default_device = None
     _lock = threading.Lock()
+    _cpu_override = False  # Track whether CPU has been explicitly selected as override
 
     # Save original torch functions as class attributes
     _original_torch_cuda_is_available = torch.cuda.is_available
@@ -247,50 +322,96 @@ class TorchDevice:
             return isinstance(instance, _ORIGINAL_TORCH_DEVICE_TYPE)
     
     @classmethod
-    def torch_device_replacement(cls, device_type=None, device_index=None):
-        with cls._lock:
-            if cls._default_device is None:
-                cls._detect_default_device()
-            
-            # Capture the original call details for better logging
-            original_device_str = None
-            if device_type is None:
-                original_device_str = "None"
-            elif isinstance(device_type, str):
-                if device_index is not None:
-                    original_device_str = f"{device_type}:{device_index}"
-                else:
-                    original_device_str = device_type
-            else:
-                original_device_str = str(device_type)
-            
-            # Process the device request
-            if device_type is None:
+    def torch_device_replacement(cls, device_type="", device_index=None):
+        """
+        Replacement for torch.device that applies redirection logic.
+        
+        This method intercepts torch.device() calls and applies smart redirection logic:
+        1. If no device is specified, it uses the default device based on available hardware
+        2. If CUDA is requested but not available, it redirects to MPS if available
+        3. If MPS is requested but not available, it redirects to CUDA if available
+        4. If neither is available, it falls back to CPU
+        
+        Special CPU override feature:
+        - Using 'cpu:-1' as the device specification forces CPU usage regardless of available GPUs
+        - This sets a global CPU override flag that affects all subsequent device creations
+        - Even explicit GPU requests will be redirected to CPU while the override is active
+        - Useful for debugging, benchmarking, or ensuring consistent behavior
+        
+        Args:
+            device_type (str or torch.device): The device type to create ('cuda', 'mps', 'cpu')
+                                              or a string in the format 'device:index'
+            device_index (int, optional): The device index (for multi-GPU setups)
+        
+        Returns:
+            torch.device: The redirected device object
+        """
+        # Case 1: No device_type provided—use the default device.
+        if not device_type:
+            with cls._lock:
+                if cls._default_device is None:
+                    cls._detect_default_device()
                 device_type = cls._default_device
-                device_index = 0 if device_index is None else device_index
-                device_str = f"{device_type}:{device_index}"
-                log_message(f"Creating default device: torch.device('{device_str}')", "torch.device")
-                return cls._original_torch_device(device_str)
+            log_message(f"Creating default device: torch.device('{device_type}')", "torch.device")
+            return cls._original_torch_device(device_type)
+
+        # Case 2: device_type is a string.
+        if isinstance(device_type, str):
+            # Handle CPU override represented in a colon format (e.g., "cpu:-1").
+            if ':' in device_type:
+                name, index = device_type.split(":", 1)
+                if name == 'cpu' and index == '-1':
+                    with cls._lock:
+                        cls._default_device = 'cpu'
+                        cls._cpu_override = True
+                    log_message("Explicitly overriding default device to CPU per user request", "torch.device")
+                    return cls._original_torch_device('cpu:0')
+                # Otherwise, redirect the device name.
+                redirected = cls._redirect_device_type(name)
+                device_str = f"{redirected}:{index}" if redirected != name else device_type
+                if redirected != name:
+                    log_message(f"Redirecting device '{device_type}' to '{device_str}'", "torch.device")
+            else:
+                # Handle a device type without an index.
+                redirected = cls._redirect_device_type(device_type)
+                device_str = redirected if redirected != device_type else device_type
+                if redirected != device_type:
+                    log_message(f"Redirecting device '{device_type}' to '{device_str}'", "torch.device")
+            
+            log_message(f"Creating torch.device('{device_str}')", "torch.device")
+            return cls._original_torch_device(device_str)
+
+        # Case 3: device_type is not a string, and device_index is provided separately.
+        else:
+            with cls._lock:
+                if cls._default_device is None:
+                    cls._detect_default_device()
+            
+            # Handle CPU override for separate arguments.
+            if device_type == 'cpu' and device_index == -1:
+                with cls._lock:
+                    cls._default_device = 'cpu'
+                    cls._cpu_override = True
+                log_message("Explicitly overriding default device to CPU per user request", "torch.device")
+                return cls._original_torch_device('cpu', 0)
             
             if isinstance(device_type, str):
-                if ':' in device_type:
-                    device_type, index = device_type.split(':')
-                    device_index = int(index)
-                else:
-                    device_index = 0 if device_index is None else device_index
-                
-                redirected_device_type = cls._redirect_device_type(device_type)
-                device_str = f"{redirected_device_type}:{device_index}"
-                
-                if redirected_device_type != device_type:
-                    log_message(f"Redirecting torch.device('{original_device_str}') to torch.device('{device_str}')", "torch.device")
-                else:
-                    log_message(f"Creating torch.device('{device_str}')", "torch.device")
-                
-                return cls._original_torch_device(device_str)
-            else:
-                log_message(f"Creating torch.device with non-string type: {original_device_str}", "torch.device")
-                return cls._original_torch_device(device_type)
+                redirected = cls._redirect_device_type(device_type)
+                if cls._cpu_override and device_type == 'cpu':
+                    log_message("Respecting explicit CPU device request due to active CPU override", "torch.device")
+                    return cls._original_torch_device('cpu', device_index)
+                if redirected != device_type:
+                    log_message(f"Redirecting device '{device_type}' to '{redirected}'", "torch.device")
+                    device_type = redirected
+            
+            log_message(f"Creating torch.device('{device_type}', {device_index})", "torch.device")
+            if device_index is not None:
+                try:
+                    device_index = int(device_index)
+                except ValueError:
+                    pass
+                return cls._original_torch_device(device_type, device_index)
+            return cls._original_torch_device(device_type)
 
     @classmethod
     def _detect_default_device(cls):
@@ -308,25 +429,31 @@ class TorchDevice:
     @classmethod
     def _redirect_device_type(cls, device_type):
         # Get the original device type for logging
-        original_device_type = device_type
+        original_type = device_type
         
+        # If CPU override is active and CPU is requested, respect the choice
+        if cls._cpu_override and device_type == 'cpu':
+            log_message("Respecting explicit CPU device request due to active CPU override", "_redirect_device_type")
+            return device_type
+            
+        # Continue with normal device type redirection
         if device_type.startswith('cuda'):
             if cls._default_device == 'cuda':
                 return 'cuda'
             elif cls._default_device == 'mps':
-                log_message(f"CUDA device '{original_device_type}' requested but not available. Redirecting to MPS.", "torch.device")
+                log_message(f"CUDA device '{original_type}' requested but not available. Redirecting to MPS.", "torch.device")
                 return 'mps'
             else:
-                log_message(f"CUDA device '{original_device_type}' requested but not available. Redirecting to CPU.", "torch.device")
+                log_message(f"CUDA device '{original_type}' requested but not available. Redirecting to CPU.", "torch.device")
                 return 'cpu'
         elif device_type.startswith('mps'):
             if cls._default_device == 'mps':
                 return 'mps'
             elif cls._default_device == 'cuda':
-                log_message(f"MPS device '{original_device_type}' requested but not available. Redirecting to CUDA.", "torch.device")
+                log_message(f"MPS device '{original_type}' requested but not available. Redirecting to CUDA.", "torch.device")
                 return 'cuda'
             else:
-                log_message(f"MPS device '{original_device_type}' requested but not available. Redirecting to CPU.", "torch.device")
+                log_message(f"MPS device '{original_type}' requested but not available. Redirecting to CPU.", "torch.device")
                 return 'cpu'
         else:
             return device_type

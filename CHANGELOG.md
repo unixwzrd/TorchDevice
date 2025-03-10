@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## 2025-03-15 - 0.0.5
+
+### CPU Override Feature
+- **Explicit CPU Device Selection**
+  - Added new `cpu:-1` device specification to force CPU usage regardless of available accelerators
+  - Implemented CPU override flag to ensure all subsequent operations respect explicit CPU selection
+  - Enhanced device redirection logic to recognize and honor CPU override requests
+  - Simplified device handling logic for better maintainability and reliability
+
+- **Testing Infrastructure Improvements**
+  - Separated CPU and MPS tests into dedicated modules to prevent test interference:
+    - `test_cpu_operations.py` for testing CPU-specific functionality
+    - `test_mps_operations.py` for testing MPS-specific functionality
+    - `test_cpu_override.py` for testing the new CPU override feature
+  - Fixed device handling in tests to properly isolate test environments
+  - Updated expected output files to accommodate new logging patterns
+  - Enhanced test robustness with better device state management
+
+- **Device Handling Logic Improvements**
+  - Simplified `torch_device_replacement` function with clearer, more declarative logic
+  - Enhanced handling of device indices for both string and separated parameter formats
+  - Improved input validation to prevent invalid device specifications
+  - Streamlined error handling for more robust operation with edge cases
+
 ## 2025-03-10 - 0.0.4
 
 ### TDLogger Improvements

@@ -18,11 +18,19 @@
   - Fix compatibility with static type checkers
   - Maintain dynamic behavior while improving static analysis
 
-- **Implement CPU Override Functionality**
-  - Add mechanism to respect explicit CPU device requests
-  - Create policy for when to override vs. when to respect explicit device choices
-  - Add configuration option to control redirection behavior
-  - Update documenation to explain the new behavior
+- **CPU Override Beta Release Preparation**
+  - ✅ Implement special 'cpu:-1' syntax for forcing CPU usage
+  - ✅ Add global _cpu_override flag to track explicit CPU selection
+  - ✅ Update device redirection logic to respect CPU override
+  - ✅ Create dedicated tests for CPU override functionality
+  - ✅ Update documentation and add examples
+  - Test on different PyTorch versions to ensure compatibility
+  - Test on different hardware configurations (CUDA, MPS, CPU-only)
+  - Add more edge case tests for device indices and error conditions
+  - Verify mixed precision operations work correctly with CPU override
+  - Consider implementing runtime toggle for CPU override in future release
+  - Investigate performance impact of CPU override vs. native CPU operations
+  - Prepare beta release announcement and feedback mechanism
 
 - **Improve Class Structure**
   - Review inheritance patterns for Stream and Event classes
@@ -66,11 +74,19 @@
 
 ## Device Handling Improvements
 
-- **Respect Explicit CPU Device Specifications**
-  - Modify TorchDevice to respect explicit CPU device requests
-  - Fix failing tests in test_cpu_mps_operations.py due to device redirection
-  - Ensure proper handling of operations involving both CPU and accelerated devices
-  - Add test cases for explicit CPU operations
+- ✅ **Implement CPU Override Feature**
+  - ✅ Added special 'cpu:-1' device specification to force CPU usage
+  - ✅ Implemented CPU override flag to ensure all subsequent operations respect explicit CPU selection
+  - ✅ Enhanced device redirection logic to recognize and honor CPU override requests
+  - ✅ Created dedicated test files for CPU, MPS, and override functionality
+  - ✅ Simplified device handling logic for better maintainability
+  - ✅ Added examples and updated documentation
+
+- **Additional Device Handling Enhancements**
+  - Allow toggling CPU override on/off during runtime
+  - Provide finer-grained control over which operations respect the override
+  - Optimize performance for CPU-specific operations
+  - Add support for dynamic device allocation based on operation requirements
 
 ## Test Framework Improvements
 
@@ -96,4 +112,10 @@
 - **Improve API Documentation**
   - Document all public interfaces
   - Add examples for all major features
-  - Include type annotations for better IDE support 
+  - Include type annotations for better IDE support
+
+## Known Issues
+
+- TorchDevice.py has several linter errors that should be addressed in a future refactoring
+- CPU override may not work with all third-party extensions to PyTorch
+- The override remains active for the entire Python session; a future enhancement could allow toggling it on/off 
