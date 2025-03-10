@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## 2025-03-10 - 0.0.4
+
+### TDLogger Improvements
+- **Consolidated Duplicate Code**
+  - Added new helper functions to centralize common operations:
+    - `contains_important_message()` - Checks if a message contains important patterns that should always be logged
+    - `is_setup_or_init()` - Identifies setup and initialization functions for better filtering
+    - `format_message()` - Centralizes message formatting for consistency
+  - Reorganized code structure for better clarity and maintainability
+
+- **Optimized Message Filtering Logic**
+  - Improved the `should_skip_message()` function with clearer, more declarative logic
+  - Created constant `IMPORTANT_MESSAGE_PATTERNS` to centralize patterns that should always be logged
+  - Enhanced filtering to ensure critical messages are never skipped
+  - Simplified complex conditional logic for better readability and maintainability
+
+- **Improved Error Handling**
+  - Added robust try/except blocks in `log_message()` to catch and handle exceptions
+  - Added error reporting that directs error messages to stderr for easy debugging
+  - Ensured exceptions in the logger won't propagate to the main application
+  - Fixed edge cases that could cause unexpected behavior during logging
+
+- **Test Framework Enhancements**
+  - Improved `PrefixedTestCase` class with clear separation between test messages and TDLogger output
+  - Fixed formatting inconsistencies in the test output for better readability
+  - Updated expected output files to reflect new logger behavior
+  - Enhanced error handling in test utilities
+
+### Test Infrastructure Improvements
+- **Created Common Test Utilities Directory**
+  - Added `tests/common/` directory to house shared test infrastructure
+  - Implemented `test_utils.py` with the `PrefixedTestCase` class providing standardized logging capabilities
+  - Moved `log_diff.py` to common location for reuse across all test modules
+  - Standardized test setup and teardown procedures across all tests
+  - Improved test discoverability and organization
+
 ## 2025-03-08 - 0.0.3
 
 ### Logger Improvements

@@ -4,10 +4,19 @@ This directory contains tests for the TDLogger module, which is responsible for 
 
 ## Test Utilities
 
-### test_utils.py
+These tests use common utilities from the `tests/common/` directory:
 
-This file provides common functionality for all TDLogger tests:
+### common/test_utils.py
 
+Provides the `PrefixedTestCase` base class with:
+- Standard test setup and teardown procedures
+- Consistent test output formatting
+- Logging methods for test diagnostics
+- Clear separation between test messages and TDLogger output
+
+### common/log_diff.py
+
+Provides log capture and verification utilities:
 - `diff_check()`: Compares captured logs with expected output files
 - `setup_log_capture()`: Sets up logging for tests
 - `teardown_log_capture()`: Cleans up after tests
@@ -40,32 +49,48 @@ Tests various device operations with TorchDevice, including:
 - Tensor movement between devices
 - CUDA function calls and their logging
 
+### test_device_utils.py
+
+Tests device utility functions with TorchDevice, including:
+
+- Device properties retrieval
+- Memory management functions
+- Stream and event interactions
+
+### test_tensor_operations.py
+
+Tests tensor operations with TorchDevice, including:
+
+- Arithmetic operations on tensors
+- Tensor reshaping operations
+- Tensor indexing and slicing
+
 ## Running Tests
 
 To run all TDLogger tests and update the expected output files:
 
 ```bash
-python tests/run_tests_and_install.py --update-expected tests/test_tdlogger/
+python run_tests_and_install.py --update-expected tests/test_tdlogger/
 ```
 
 To run the tests without updating the expected output files:
 
 ```bash
-python tests/run_tests_and_install.py tests/test_tdlogger/
+python run_tests_and_install.py --test-only tests/test_tdlogger/
 ```
 
 To run a specific test file:
 
 ```bash
-python tests/run_tests_and_install.py tests/test_tdlogger/test_basic.py
+python run_tests_and_install.py --test-only tests/test_tdlogger/test_basic.py
 ```
 
 ## Adding New Tests
 
 When adding new tests for TDLogger:
 
-1. Import the utility functions from `test_utils.py`
-2. Use `setup_log_capture()` and `teardown_log_capture()` in your test class
+1. Extend the `PrefixedTestCase` class from `common/test_utils.py`
+2. Use `setup_log_capture()` and `teardown_log_capture()` from `common/log_diff.py`
 3. Capture log output during test execution
 4. Use `diff_check()` to compare the captured output with expected results
 5. Create expected output files by running tests with the `--update-expected` flag
@@ -73,37 +98,33 @@ When adding new tests for TDLogger:
 Example:
 
 ```python
-from test_utils import diff_check, setup_log_capture, teardown_log_capture
+from common.test_utils import PrefixedTestCase
+from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 
-class TestMyFeature(unittest.TestCase):
+class TestMyFeature(PrefixedTestCase):
     def setUp(self):
-        # Set up logging
-        result = setup_log_capture()
-        self.logger = result[0]
-        self.log_stream = result[1]
-        self.log_handler = result[2]
-        self.console_handler = result[3]
-        self.original_handlers = result[4]
-        self.original_level = result[5]
+        # Call parent setUp which sets up logging
+        super().setUp()
         
-        # Define expected output file
-        self.expected_output_file = Path(__file__).parent / f"{self._testMethodName}_expected.log"
+        # Set up log capture with a unique test name
+        self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)
         
     def tearDown(self):
         # Clean up logging
-        teardown_log_capture(
-            self.logger, 
-            self.original_handlers, 
-            self.original_level,
-            [self.log_handler, self.console_handler]
-        )
+        teardown_log_capture(self.log_capture)
+        
+        # Call parent tearDown which cleans up the test
+        super().tearDown()
         
     def test_my_feature(self):
+        # Print test info
+        self.info("Testing my feature")
+        
         # Run operations that generate logs
         # ...
         
-        # Get captured log output
-        captured_log = self.log_stream.getvalue()
+        # Verify results
+        self.info("Tests completed successfully")
         
-        # Compare with expected output
-        diff_check(captured_log, self.expected_output_file) 
+        # Check the log output against expected
+        diff_check(self.log_capture) 

@@ -67,31 +67,32 @@ def tensor_to_replacement(self, *args, **kwargs):
                 (hasattr(candidate, '__module__') and candidate.__module__ != 'torch')
             ):
             device_arg = candidate
+            # Replace args with default device if requested device not available
+            if isinstance(candidate, str) and candidate != default_device:
+                args = (default_device,) + args[1:]
+            elif isinstance(candidate, _ORIGINAL_TORCH_DEVICE_TYPE) and candidate.type != default_device:
+                args = (default_device,) + args[1:]
     elif 'device' in kwargs:
         device_arg = kwargs['device']
         
         # Handle device redirection in kwargs
         if isinstance(device_arg, str):
             device_type = device_arg.split(':')[0] if ':' in device_arg else device_arg
-            redirected_type = TorchDevice._redirect_device_type(device_type)
-            
-            if redirected_type != device_type:
+            if device_type != default_device:
                 if ':' in device_arg:
                     index = device_arg.split(':')[1]
-                    kwargs['device'] = f"{redirected_type}:{index}"
+                    kwargs['device'] = f"{default_device}:{index}"
                 else:
-                    kwargs['device'] = redirected_type
-                log_message(f"Redirecting tensor.to() from '{device_type}' to '{redirected_type}'.", "tensor.to")
+                    kwargs['device'] = default_device
+                log_message(f"Redirecting tensor.to() from '{device_type}' to '{default_device}'.", "tensor.to")
         elif hasattr(device_arg, 'type'):
             device_type = device_arg.type
-            redirected_type = TorchDevice._redirect_device_type(device_type)
-            
-            if redirected_type != device_type:
+            if device_type != default_device:
                 index = getattr(device_arg, 'index', 0)
                 if index is None:
                     index = 0
-                kwargs['device'] = TorchDevice.torch_device_replacement(f"{redirected_type}:{index}")
-                log_message(f"Redirecting tensor.to() from '{device_type}' to '{redirected_type}'.", "tensor.to")
+                kwargs['device'] = TorchDevice.torch_device_replacement(f"{default_device}:{index}")
+                log_message(f"Redirecting tensor.to() from '{device_type}' to '{default_device}'.", "tensor.to")
     
     # Log warning if target device doesn't match default
     if device_arg is not None:
@@ -103,6 +104,8 @@ def tensor_to_replacement(self, *args, **kwargs):
             target_device = str(device_arg)
         if target_device != default_device:
             log_message(f"tensor.to() called with device {device_arg} which does not match the default device {default_device}.", "tensor.to")
+    
+    # Call the original to() with the redirected device
     return _original_tensor_to(self, *args, **kwargs)
 
 def module_to_replacement(self, *args, **kwargs):

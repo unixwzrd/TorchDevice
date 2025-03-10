@@ -1,17 +1,14 @@
 #!/usr/bin/env python
-import unittest
-import torch
-import numpy as np
-import sys
-import os
 import logging
-import TorchDevice  # Ensure this module is imported to apply patches
+import unittest
+import numpy as np
 
-# Add the current directory to the module search path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from test_utils import PrefixedTestCase  # Import our custom TestCase
+import torch
+from common.test_utils import PrefixedTestCase
+from common.log_diff import diff_check, setup_log_capture, teardown_log_capture, LogCapture
 
-# Configure logging
+import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up
+
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -19,13 +16,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Prevent duplicate logging
-logging.getLogger("TorchDevice").propagate = False
 
 class TestTorchDevice(PrefixedTestCase):
 
     def setUp(self):
         """Set up test environment."""
+        # Call the parent setUp method to set up logging
+        super().setUp()
+        
         # Determine the available hardware
         self.has_cuda = torch.cuda.is_available()
         self.has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()

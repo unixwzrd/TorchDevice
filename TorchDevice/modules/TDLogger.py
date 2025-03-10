@@ -60,6 +60,12 @@ SKIP_FUNCTION_TYPES = [
     'event'
 ]
 
+# Messages that are always important and should never be skipped
+IMPORTANT_MESSAGE_PATTERNS = [
+    'Redirecting',
+    'Synchronizing'
+]
+
 
 def is_test_environment() -> bool:
     """
@@ -110,82 +116,6 @@ def is_internal_frame(filename: str, function_name: str) -> bool:
     return False
 
 
-def should_skip_message(info: Dict[str, Any], message: str, torch_function: Optional[str]) -> bool:
-    """
-    Determine if a message should be skipped based on various filtering criteria.
-    
-    Args:
-        info: The caller information dictionary
-        message: The log message
-        torch_function: The torch function name
-        
-    Returns:
-        bool: True if the message should be skipped, False otherwise
-    """
-    # Skip internal TorchDevice calls
-    if info['caller_filename'] == 'TorchDevice.py' and info['caller_func_name'] == 'internal':
-        return True
-    
-    # Skip module-level initialization messages
-    if info['caller_func_name'] == '<module>' and '__init__.py' in info['caller_filename']:
-        if any(msg in message for msg in ['detected as default device', 'Default device set to:']):
-            return True
-    
-    # Skip internal torch.device creation calls
-    if torch_function == 'torch.device' and 'Creating torch.device' in message:
-        # Only log device creation if it's explicitly requested by user code
-        # Skip internal device creation for setup and initialization
-        if is_setup_or_init(info['caller_func_name']):
-            return True
-    
-    # Skip internal initialization messages for setup/init functions
-    # But always log redirections and important operations
-    if is_setup_or_init(info['caller_func_name']):
-        # Skip device detection and setting messages in setup/init
-        if any(msg in message for msg in ['detected as default device', 'Default device set to:']):
-            return True
-        # Skip tensor creation messages for internal operations
-        if 'Creating tensor' in message:
-            return True
-        # Do NOT skip redirection messages even in setup/init
-        if 'Redirecting' in message:
-            return False
-    
-    # Skip dunder method logs
-    if torch_function and ('__' in torch_function or 'StreamContext' in torch_function):
-        return True
-    
-    # Skip specific function type logs, but not if they contain important operations
-    if torch_function:
-        for func_type in SKIP_FUNCTION_TYPES:
-            if func_type in torch_function.lower():
-                # Don't skip if it's a redirection or synchronization
-                if 'Redirecting' in message or 'Synchronizing' in message:
-                    return False
-                return True
-    
-    # For unittest frames, be more selective
-    is_unittest = 'unittest' in info['caller_filename'] or 'case.py' in info['caller_filename']
-    if is_unittest and not info['caller_func_name'].startswith('test_'):
-        return True
-    
-    # Check if it's an internal call, but don't skip redirections
-    is_internal_call = (
-        'TorchDevice.py' in info['caller_filename'] or 
-        'torch/cuda' in info['caller_filename'] or 
-        'torch/backends' in info['caller_filename'] or
-        'torch/_tensor.py' in info['caller_filename'] or
-        'torch/nn/modules/module.py' in info['caller_filename']
-    )
-    if is_internal_call:
-        # Don't skip if it's a redirection or synchronization
-        if 'Redirecting' in message or 'Synchronizing' in message:
-            return False
-        return True
-    
-    return False
-
-
 def is_setup_or_init(func_name: str) -> bool:
     """
     Determine if a function name is related to setup or initialization.
@@ -201,6 +131,80 @@ def is_setup_or_init(func_name: str) -> bool:
         'init' in func_name.lower() or 
         func_name == '<module>'
     )
+
+
+def contains_important_message(message: str) -> bool:
+    """
+    Determine if a message contains important information that should never be skipped.
+    
+    Args:
+        message: The message to check
+        
+    Returns:
+        bool: True if the message contains important information, False otherwise
+    """
+    return any(pattern in message for pattern in IMPORTANT_MESSAGE_PATTERNS)
+
+
+def should_skip_message(info: Dict[str, Any], message: str, torch_function: Optional[str]) -> bool:
+    """
+    Determine if a message should be skipped based on various filtering criteria.
+    
+    Args:
+        info: The caller information dictionary
+        message: The log message
+        torch_function: The torch function name
+        
+    Returns:
+        bool: True if the message should be skipped, False otherwise
+    """
+    # Never skip important messages like redirections and synchronizations
+    if contains_important_message(message):
+        return False
+    
+    # Skip internal TorchDevice calls
+    if info['caller_filename'] == 'TorchDevice.py' and info['caller_func_name'] == 'internal':
+        return True
+    
+    # Skip module-level initialization messages
+    if info['caller_func_name'] == '<module>' and '__init__.py' in info['caller_filename']:
+        if any(msg in message for msg in SETUP_INIT_MESSAGES):
+            return True
+    
+    # Skip internal torch.device creation calls during setup/init
+    if torch_function == 'torch.device' and 'Creating torch.device' in message and is_setup_or_init(info['caller_func_name']):
+        return True
+    
+    # Skip internal initialization messages for setup/init functions
+    if is_setup_or_init(info['caller_func_name']):
+        # Skip device detection and setting messages in setup/init
+        if any(msg in message for msg in SETUP_INIT_MESSAGES[:2]):  # Only use the first two setup messages
+            return True
+        # Skip tensor creation messages for internal operations
+        if 'Creating tensor' in message:
+            return True
+    
+    # Skip dunder method logs
+    if torch_function and ('__' in torch_function or 'StreamContext' in torch_function):
+        return True
+    
+    # Skip specific function type logs
+    if torch_function:
+        for func_type in SKIP_FUNCTION_TYPES:
+            if func_type in torch_function.lower():
+                return True
+    
+    # For unittest frames, be more selective
+    is_unittest = 'unittest' in info['caller_filename'] or 'case.py' in info['caller_filename']
+    if is_unittest and not info['caller_func_name'].startswith('test_'):
+        return True
+    
+    # Check if it's an internal call
+    is_internal_call = any(pattern in info['caller_filename'] for pattern in INTERNAL_PATTERNS)
+    if is_internal_call:
+        return True
+    
+    return False
 
 
 def get_outer_frames() -> list:
@@ -282,48 +286,47 @@ def get_caller_info() -> Dict[str, Any]:
 
 def log_message(message, torch_function=None):
     """Log a GPU redirection message with the given torch function."""
-    # Get caller information
-    info = get_caller_info()
-    
-    # Check if we should skip this message
-    if should_skip_message(info, message, torch_function):
-        return
-    
-    # Add torch_function to the info
-    info['torch_function'] = torch_function if torch_function else 'unknown'
-    
-    # Create a unique key for this message to avoid duplicates
-    caller_key = f"{info['caller_filename']}:{info['caller_func_name']}:{info['caller_lineno']}"
-    function_key = torch_function if torch_function else 'unknown'
-    message_key = f"{caller_key}:{function_key}:{message}"
-    
-    # Track the first time we see a torch function call from a specific location
-    # Only track actual user code, not unittest internals
-    if function_key not in _entry_points and 'unittest' not in info['caller_filename'] and 'case.py' not in info['caller_filename']:
-        _entry_points[function_key] = caller_key
-    
-    # Determine if we should log this message
-    is_first_call = _entry_points.get(function_key) == caller_key
-    is_new_message = message_key not in _logged_messages
-    
-    # Always log redirection and synchronization messages
-    contains_important_info = 'Redirecting' in message or 'Synchronizing' in message
-    
-    # For redirection messages, always log them regardless of whether they've been seen before
-    if contains_important_info:
-        should_log = True
-    # For other messages, only log the first occurrence from each location or if it's a new message
-    else:
-        should_log = is_first_call or is_new_message
-    
-    if should_log:
-        # Remember we've seen this message
-        # The deque automatically manages its size, removing oldest entries when full
-        _logged_messages.append(message_key)
+    try:
+        # Get caller information
+        info = get_caller_info()
         
-        # Format the message based on its content
-        if message and not message.startswith('using:') and any(x in message for x in ['(', '=', ',']):
-            message = f"using: {message}"
+        # When log_message is called directly (not from TorchDevice redirections)
+        # Use the provided function name instead of relying solely on stack inspection
+        if torch_function and 'torch_function' not in info:
+            # This means log_message was called directly with a specific function name
+            # Use that function name directly in the logging
+            info['torch_function'] = torch_function
+        else:
+            # Add torch_function to the info for normal redirections
+            info['torch_function'] = torch_function if torch_function else 'unknown'
         
-        # Log the message
-        logger.info(message, extra=info)
+        # Check if we should skip this message
+        if should_skip_message(info, message, torch_function):
+            return
+        
+        # Create a unique key for this message to avoid duplicates
+        caller_key = f"{info['caller_filename']}:{info['caller_func_name']}:{info['caller_lineno']}"
+        function_key = torch_function if torch_function else 'unknown'
+        message_key = f"{caller_key}:{function_key}:{message}"
+        
+        # Track the first time we see a torch function call from a specific location
+        # Only track actual user code, not unittest internals
+        if function_key not in _entry_points and 'unittest' not in info['caller_filename'] and 'case.py' not in info['caller_filename']:
+            _entry_points[function_key] = caller_key
+        
+        # Determine if we should log this message
+        is_first_call = _entry_points.get(function_key) == caller_key
+        is_new_message = message_key not in _logged_messages
+        
+        # For important messages or first occurrences, log the message
+        should_log = contains_important_message(message) or is_first_call or is_new_message
+        
+        if should_log:
+            # Remember we've seen this message
+            _logged_messages.append(message_key)
+            
+            # Log the message
+            logger.info(message, extra=info)
+    except Exception as e:
+        # Ensure exceptions in the logger don't propagate to the main application
+        print(f"Error in TDLogger: {str(e)}", file=sys.stderr)

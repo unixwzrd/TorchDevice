@@ -2,6 +2,23 @@
 
 This directory contains the test suite for the TorchDevice module. The tests ensure that TorchDevice correctly redirects CUDA calls to MPS (Metal Performance Shaders) and vice versa, with a fallback to CPU if neither is available.
 
+## Test Structure
+
+### common/ (Directory)
+
+This directory contains shared test utilities used across all test modules:
+
+- **test_utils.py**: Provides the `PrefixedTestCase` base class extending `unittest.TestCase` with:
+  - Standard test setup and teardown procedures
+  - Consistent test output formatting
+  - Logging methods (`info`, `print_debug`, `warning`, `error`) for test diagnostics
+  - Clear separation between test messages and TDLogger output
+
+- **log_diff.py**: Contains utilities for test log capture and verification:
+  - `setup_log_capture()`: Sets up logging capture for tests
+  - `teardown_log_capture()`: Cleans up after tests
+  - `diff_check()`: Compares captured logs with expected output files
+
 ## Test Files
 
 ### test_TorchDevice.py
@@ -28,6 +45,16 @@ This file contains comprehensive tests for CUDA operations, focusing on:
 - Stream synchronization and waiting mechanisms
 
 These tests are derived from real-world usage patterns found in the `test_projects` directory to ensure that TorchDevice works correctly with typical PyTorch CUDA code.
+
+### test_cpu_mps_operations.py
+
+This file tests CPU and MPS operations specifically, ensuring:
+
+- Proper tensor creation on both CPU and MPS devices
+- Correct tensor operations on device-specific tensors
+- Neural network operations on both devices
+- Device conversion between CPU and MPS
+- MPS device properties and behavior
 
 ### test_submodule.py
 
@@ -71,9 +98,9 @@ python tests/run_tests_and_install.py --update-expected
 To run individual test files:
 
 ```bash
-python tests/test_TorchDevice.py
-python tests/test_cuda_operations.py
-python tests/test_tdlogger/test_basic.py
+python tests/run_tests_and_install.py --test-only tests/test_TorchDevice.py
+python tests/run_tests_and_install.py --test-only tests/test_cuda_operations.py
+python tests/run_tests_and_install.py --test-only tests/test_tdlogger/test_basic.py
 ```
 
 ## Test Coverage
@@ -91,9 +118,10 @@ The test suite covers:
 
 When adding new tests:
 
-1. Follow the existing pattern of using `unittest.TestCase`
-2. Ensure tests are independent and can run in any order
-3. Add appropriate assertions to verify functionality
-4. Document the purpose of the test in docstrings
-5. If adding a new test file, follow the naming convention `test_*.py`
-6. For tests that verify log output, use the utilities in `test_tdlogger/test_utils.py`
+1. Extend the `PrefixedTestCase` class from `common/test_utils.py` for consistent test behavior
+2. Use the logging methods provided by `PrefixedTestCase` for test diagnostics
+3. Utilize `setup_log_capture()` and `diff_check()` from `common/log_diff.py` for log verification
+4. Ensure tests are independent and can run in any order
+5. Add appropriate assertions to verify functionality
+6. Document the purpose of the test in docstrings
+7. If adding a new test file, follow the naming convention `test_*.py`

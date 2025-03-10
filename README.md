@@ -20,6 +20,7 @@ TorchDevice is a Python library that enables transparent code portability betwee
   - [Limitations](#limitations)
   - [Recent Updates](#recent-updates)
     - [March 2025 Updates](#march-2025-updates)
+      - [Improved Logging System](#improved-logging-system)
       - [Stream and Event Handling](#stream-and-event-handling)
       - [PyTorch Compatibility](#pytorch-compatibility)
       - [Code Quality](#code-quality)
@@ -193,6 +194,22 @@ Ensure these scripts are updated with any changes you made to `TorchDevice.py`.
 ### March 2025 Updates
 
 The TorchDevice library has undergone significant improvements to ensure seamless compatibility between CUDA and MPS devices:
+
+#### Improved Logging System
+
+- **TDLogger Module Enhancements**:
+  - Consolidated duplicate code with dedicated helper functions for message filtering and formatting
+  - Optimized message filtering logic with declarative pattern matching
+  - Improved error handling with robust exception capture
+  - Enhanced memory management using fixed-size collections for logging history
+  - Centralized important message patterns for consistent filtering
+  
+- **Test Framework Improvements**:
+  - Created standardized test infrastructure in the `common` directory
+  - Implemented `PrefixedTestCase` class for consistent test behavior and logging
+  - Added dedicated utilities for log capture and verification
+  - Improved log message formatting and separation between test output and redirected messages
+  - Enhanced test organization and discoverability
 
 #### Stream and Event Handling
 

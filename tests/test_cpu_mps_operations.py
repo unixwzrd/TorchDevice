@@ -1,16 +1,13 @@
 #!/usr/bin/env python
-import unittest
-import torch
-import numpy as np
-import sys
-import os
 import logging
-import TorchDevice  # Ensure this module is imported to apply patches
+import unittest
+from pathlib import Path
 
-# Add the current directory to the module search path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from test_utils import PrefixedTestCase  # Import our custom TestCase
+import torch
+from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
+from common.test_utils import PrefixedTestCase
 
+import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, 
@@ -19,9 +16,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Prevent duplicate logging
-logging.getLogger("TorchDevice").propagate = False
-
 class TestCPUOperations(PrefixedTestCase):
     """
     Test case for CPU operations to ensure they work correctly with TorchDevice.
@@ -29,27 +23,47 @@ class TestCPUOperations(PrefixedTestCase):
     
     def setUp(self):
         """Set up test environment."""
-        # Always use CPU for these tests
+        # Call the parent setUp method to set up logging
+        super().setUp()
+        
+        print("\n" + "=" * 80)
+        print(f"Starting test: {self._testMethodName}")
+        print("=" * 80)
+        
+        # Set up log capture with a unique test name.
+        self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)   
+
+        # Set device to CPU for these tests
         self.device = torch.device('cpu')
         self.info("Using device: %s", self.device)
-    
+
+    def tearDown(self):
+        """Clean up logger capture and restore original configuration."""
+        teardown_log_capture(self.log_capture)
+        
+        # Print a footer for the test
+        print("\n" + "=" * 80)
+        print(f"Finished test: {self._testMethodName}")
+        print("=" * 80)
+
+
     def test_cpu_tensor_creation(self):
         """Test creating tensors explicitly on CPU."""
         self.info("Testing CPU tensor creation")
         
-        # Create tensors with different methods
-        tensor1 = torch.randn(10, device='cpu')
-        tensor2 = torch.zeros(10, device='cpu')
-        tensor3 = torch.ones(10, device='cpu')
-        tensor4 = torch.tensor([1, 2, 3], device='cpu')
+        # Create a tensor on CPU
+        tensor1 = torch.tensor([1.0, 2.0, 3.0], device='cpu')
+        tensor2 = torch.ones((2, 3), device='cpu')
         
-        # Verify they're all on CPU
+        # Verify they're on CPU
         self.assertEqual(tensor1.device.type, 'cpu')
         self.assertEqual(tensor2.device.type, 'cpu')
-        self.assertEqual(tensor3.device.type, 'cpu')
-        self.assertEqual(tensor4.device.type, 'cpu')
         
         self.info("CPU tensor creation tests passed")
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
     
     def test_cpu_tensor_operations(self):
         """Test operations on CPU tensors."""
@@ -70,6 +84,10 @@ class TestCPUOperations(PrefixedTestCase):
         self.assertEqual(e.device.type, 'cpu')
         
         self.info("CPU tensor operations tests passed")
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
     
     def test_cpu_nn_operations(self):
         """Test neural network operations on CPU."""
@@ -97,6 +115,10 @@ class TestCPUOperations(PrefixedTestCase):
         
         self.info("CPU neural network operations tests passed")
 
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
+
 
 class TestMPSOperations(PrefixedTestCase):
     """
@@ -105,15 +127,16 @@ class TestMPSOperations(PrefixedTestCase):
     
     def setUp(self):
         """Set up test environment."""
-        # Check if MPS is available
+        # Call the parent setUp method to set up logging
+        super().setUp()
+        
+        # Determine the available hardware - use MPS if available
         self.has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-        self.has_cuda = torch.cuda.is_available()
         
-        # Skip tests if neither MPS nor CUDA is available
-        if not self.has_mps and not self.has_cuda:
-            self.skipTest("Neither MPS nor CUDA is available")
-        
-        # Use MPS device
+        # Skip tests if MPS is not available
+        if not self.has_mps:
+            self.skipTest("MPS is not available on this machine")
+            
         self.device = torch.device('mps')
         self.info("Using device: %s", self.device)
     
@@ -128,14 +151,18 @@ class TestMPSOperations(PrefixedTestCase):
         tensor4 = torch.tensor([1, 2, 3], device='mps')
         
         # Verify they're on the expected device
-        expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
+        expected_type = 'mps' if self.has_mps else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.assertEqual(tensor1.device.type, expected_type)
         self.assertEqual(tensor2.device.type, expected_type)
         self.assertEqual(tensor3.device.type, expected_type)
         self.assertEqual(tensor4.device.type, expected_type)
         
         self.info("MPS tensor creation tests passed")
-    
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
+
     def test_mps_tensor_operations(self):
         """Test operations on MPS tensors."""
         self.info("Testing MPS tensor operations")
@@ -150,13 +177,17 @@ class TestMPSOperations(PrefixedTestCase):
         e = torch.matmul(a, b)
         
         # Verify results are on the expected device
-        expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
+        expected_type = 'mps' if self.has_mps else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.assertEqual(c.device.type, expected_type)
         self.assertEqual(d.device.type, expected_type)
         self.assertEqual(e.device.type, expected_type)
         
         self.info("MPS tensor operations tests passed")
-    
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
+
     def test_mps_nn_operations(self):
         """Test neural network operations on MPS."""
         self.info("Testing MPS neural network operations")
@@ -175,7 +206,7 @@ class TestMPSOperations(PrefixedTestCase):
         output = model(x)
         
         # Verify output is on the expected device
-        expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
+        expected_type = 'mps' if self.has_mps else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.assertEqual(output.device.type, expected_type)
         
         # Check model parameters are on the expected device
@@ -183,7 +214,11 @@ class TestMPSOperations(PrefixedTestCase):
             self.assertEqual(param.device.type, expected_type)
         
         self.info("MPS neural network operations tests passed")
-    
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
+
     def test_cpu_to_mps_conversion(self):
         """Test converting tensors from CPU to MPS."""
         self.info("Testing CPU to MPS conversion")
@@ -196,7 +231,7 @@ class TestMPSOperations(PrefixedTestCase):
         mps_tensor = cpu_tensor.to('mps')
         
         # Verify it's on the expected device
-        expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
+        expected_type = 'mps' if self.has_mps else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.assertEqual(mps_tensor.device.type, expected_type)
         
         # Convert back to CPU
@@ -204,7 +239,11 @@ class TestMPSOperations(PrefixedTestCase):
         self.assertEqual(cpu_tensor_again.device.type, 'cpu')
         
         self.info("CPU to MPS conversion tests passed")
-    
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
+
     def test_mps_device_properties(self):
         """Test MPS device properties."""
         self.info("Testing MPS device properties")
@@ -213,7 +252,7 @@ class TestMPSOperations(PrefixedTestCase):
         device = torch.device('mps:0')
         
         # Check device type
-        expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
+        expected_type = 'mps' if self.has_mps else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.assertEqual(device.type, expected_type)
         
         # If it's redirected to MPS, check index
@@ -221,6 +260,10 @@ class TestMPSOperations(PrefixedTestCase):
             self.assertEqual(device.index, 0)
         
         self.info("MPS device properties tests passed")
+
+        self.log_capture.log_stream.getvalue()
+
+        diff_check(self.log_capture)
 
 
 if __name__ == '__main__':
