@@ -60,6 +60,7 @@ def run_test_file(test_file: Path, update_expected: bool) -> bool:
         cmd.append("--update-expected")
     
     logger.info(f"Running test file: {test_file}")
+    logger.info(f"Running command: {cmd}")
     result = subprocess.run(cmd, env=env)
     if result.returncode != 0:
         logger.error(f"Test file failed: {test_file}")

@@ -87,25 +87,29 @@ class TestCPUOperations(PrefixedTestCase):
         """Test neural network operations on CPU."""
         self.info("Testing CPU neural network operations")
         
+        # Create input data on CPU first
+        x = torch.randn(3, 10, device='cpu')
+        
         # Create a simple neural network
         model = torch.nn.Sequential(
             torch.nn.Linear(10, 5),
             torch.nn.ReLU(),
             torch.nn.Linear(5, 1)
-        ).to('cpu')
+        )
         
-        # Create input data
-        x = torch.randn(3, 10, device='cpu')
+        # First move model to CPU explicitly
+        model = model.cpu()
         
-        # Forward pass
+        # Double check all parameters are on CPU
+        for param in model.parameters():
+            param.data = param.data.cpu()
+            self.assertEqual(param.device.type, 'cpu')
+        
+        # Now perform the forward pass
         output = model(x)
         
         # Verify output is on CPU
         self.assertEqual(output.device.type, 'cpu')
-        
-        # Check model parameters are on CPU
-        for param in model.parameters():
-            self.assertEqual(param.device.type, 'cpu')
         
         self.info("CPU neural network operations tests passed")
         

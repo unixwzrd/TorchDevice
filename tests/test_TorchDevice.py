@@ -509,15 +509,25 @@ class TestTorchDevice(PrefixedTestCase):
         self.assertEqual(device.type, self.device.type)
 
     def test_tensor_operations_between_devices(self):
-        # Test operations between tensors on different devices
-        tensor_cpu = torch.tensor([1.0, 2.0, 3.0])
-        tensor_device = tensor_cpu.to(self.device)
+        # Create a tensor on the CPU
+        tensor_cpu = torch.tensor([1.0, 2.0, 3.0], device='cpu')
+
+        # Create tensor directly on the device
+        tensor_device = torch.tensor([1.0, 2.0, 3.0], device=self.device)
 
         # Attempt to add tensors from different devices
         with self.assertRaises(RuntimeError) as context:
             result = tensor_cpu + tensor_device
 
-        self.assertIn("Expected all tensors to be on the same device", str(context.exception))
+        # The error message might vary between PyTorch versions and devices
+        error_messages = [
+            "Expected all tensors to be on the same device",
+            "Expected all tensors to be on the same device, but found at least two devices",
+            "Expected tensor to have cpu type, but got mps type",
+            "Expected tensor to have cpu type, but got cuda type"
+        ]
+        error_found = any(msg in str(context.exception) for msg in error_messages)
+        self.assertTrue(error_found, f"Unexpected error message: {str(context.exception)}")
 
     def test_multiple_device_indices(self):
         # Test setting device index
