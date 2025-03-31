@@ -46,17 +46,40 @@ class _MockDevice:
     def __repr__(self):
         return f"device(type='{self.type}', index={self.index})"
 
+    def __eq__(self, other):
+        if isinstance(other, _ORIGINAL_TORCH_DEVICE_TYPE):
+            return (self.type == other.type and self.index == other.index)
+        return False
+
+    def __hash__(self):
+        return hash((self.type, self.index))
+
     def __instancecheck__(self, instance):
         log_info(f"_MockDevice.__instancecheck__ called with {instance}")
         log_info(f"Checking against _ORIGINAL_TORCH_DEVICE_TYPE: {_ORIGINAL_TORCH_DEVICE_TYPE}")
-        result = isinstance(instance, _ORIGINAL_TORCH_DEVICE_TYPE)
-        log_info(f"isinstance check result: {result}")
-        return result
+        # If the instance is already a torch.device, it's valid
+        if isinstance(instance, _ORIGINAL_TORCH_DEVICE_TYPE):
+            log_info("Instance is already a torch.device")
+            return True
+        # If it's our mock device, check if it matches the device type
+        if isinstance(instance, _MockDevice):
+            log_info("Instance is a _MockDevice")
+            return True
+        log_info(f"Instance check failed for {instance}")
+        return False
 
 # Only add the mock if torch.cuda.device isn't already defined
 if not hasattr(torch.cuda, 'device'):
     log_info("Setting up mock torch.cuda.device")
-    torch.cuda.device = _MockDevice
+    # Create a type object for proper type checking
+    device_type = type('device', (), {
+        '__module__': 'torch.cuda',
+        '__instancecheck__': lambda self, instance: (
+            isinstance(instance, _ORIGINAL_TORCH_DEVICE_TYPE) or 
+            isinstance(instance, _MockDevice)
+        )
+    })
+    torch.cuda.device = device_type
 
 # Log what we've set up
 log_info(f"Final torch.cuda.device: {torch.cuda.device}")
@@ -480,22 +503,24 @@ def mock_cuda_function_stub(default_device, *args, **kwargs):
 @auto_log()
 def tensor_creation_wrapper(original_func, default_device):
     def wrapped_func(*args, **kwargs):
-        # If the caller specifies a device:
+        # If a device is explicitly provided:
         if 'device' in kwargs and kwargs['device'] is not None:
             device_arg = kwargs['device']
+            # Convert string specs into a standard form:
             if isinstance(device_arg, str):
-                # If the special toggle is used, call toggle_cpu_override.
-                if device_arg == "cpu:-1":
-                    # This will toggle the override and return a torch.device.
-                    kwargs['device'] = TorchDevice.toggle_cpu_override(device_arg)
-                # Otherwise, leave the explicitly provided device alone.
+                requested_device = device_arg.split(':')[0]
+                # If the requested device doesn't match the system default:
+                if requested_device != default_device:
+                    log_info(f"WARNING: Requested device '{requested_device}' is not available; redirecting to '{default_device}'")
+                    kwargs['device'] = default_device
+            # If it's a torch.device object:
             elif hasattr(device_arg, 'type'):
-                # For a torch.device object, we could decide to honor it
-                # or also check if it equals "cpu:-1" (if you convert it to string).
-                # Here we simply honor explicit device objects.
-                pass
+                requested_device = device_arg.type
+                if requested_device != default_device:
+                    log_info(f"WARNING: Requested device '{requested_device}' is not available; redirecting to '{default_device}'")
+                    kwargs['device'] = default_device
         else:
-            # No device specified; use the default.
+            # No device specified; use the system's default.
             kwargs['device'] = default_device
             log_info(f"Using default device '{default_device}' for tensor creation")
         return original_func(*args, **kwargs)

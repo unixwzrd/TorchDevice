@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='TorchDevice',
-    version='0.0.6',
+    version='0.1.0',
     description='Intercepts PyTorch calls to enable transparent code portability between CUDA and MPS hardware.',
     author='unixwzrd',
     author_email='unixwzrd@unixwzrd.ai',
