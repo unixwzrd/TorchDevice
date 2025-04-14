@@ -1,4 +1,4 @@
-from __future__ import annotations
+import functools  # Added import for functools import logging
 import logging
 import os
 import sys
@@ -12,7 +12,7 @@ STDLIB_DIR = os.path.abspath(sysconfig.get_paths()["stdlib"])
 DUMP_STACK_FRAMES = os.environ.get("DUMP_STACK_FRAMES", "False").lower() == "true"
 
 # Number of stack frames to display in debug mode.
-STACK_FRAMES = 20
+STACK_FRAMES = 30
 
 # You can calibrate your stack offset here once.
 DEFAULT_STACK_OFFSET = 3  # adjust as needed
@@ -23,8 +23,7 @@ _INTERNAL_LOG_SKIP = {
     "apply_patches", "initialize_torchdevice", "apply_basic_patches",
     
     # Device detection and management
-    "get_default_device", "_get_default_device",
-    "redirect_device_type", "_redirect_device_type",
+    "get_default_device", "redirect_device_type", "_redirect_device_type",
     
     # Tensor operations and wrappers
     "tensor_creation_wrapper", "_get_mps_event_class",
@@ -44,10 +43,16 @@ def auto_log():
     Decorator that logs function calls with detailed caller information.
     """
     def decorator(func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            result = None
             if func.__name__ not in _INTERNAL_LOG_SKIP:
                 log_message(f"Called {func.__name__}", func.__name__)
-            return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                log_message(f"{func.__name__} returned {result}", func.__name__)
+            else:
+                result = func(*args, **kwargs)
+            return result
         return wrapper
     return decorator
 
@@ -98,7 +103,8 @@ def log_message(message: str, torch_function: str = "unknown", stacklevel: int =
         caller_func_name = frame.f_code.co_name
         # Check if we need to adjust stacklevel for test methods
         if caller_func_name in ["_callTestMethod", "_callSetUp"]:
-            frame = sys._getframe(--stacklevel)
+            stacklevel -= 1
+            frame = sys._getframe(stacklevel)
             caller_func_name = frame.f_code.co_name
         if caller_func_name in ["wrapper"]:
             stacklevel += 1
@@ -135,7 +141,8 @@ def log_message(message: str, torch_function: str = "unknown", stacklevel: int =
             except ValueError:
                 break
         dump = "\n".join(dump_lines)
-        _logger.info("Stack frame dump:\n" + dump, extra=extra)
+        log_info(f"Stack frame dump:\n{dump}")
+        log_info(f"\n**** END OF STACKFRAME DUMP ****\n\n")
 
 
 def log_info(message: str) -> None:

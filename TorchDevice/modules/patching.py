@@ -1,16 +1,40 @@
 """
 Patching  functions and hooks
 """
+import threading
 import torch
 from .TDLogger import auto_log, log_info
-from .device_detection import _CACHED_DEFAULT_DEVICE, _ORIGINAL_TORCH_DEVICE_TYPE
+
+# Save the original torch.device type for type checking.
+_ORIGINAL_TORCH_DEVICE_TYPE = torch.device("cpu").__class__
+
+# Global cache for default device.
+_CACHED_DEFAULT_DEVICE = None
 
 # Save original functions.
+# Save original functions.
+_original_torch_cuda_is_available = torch.cuda.is_available
+_original_torch_cuda_device_count = torch.cuda.device_count
+_original_torch_cuda_get_device_properties = torch.cuda.get_device_properties
+_original_torch_cuda_empty_cache = torch.cuda.empty_cache
+_original_torch_cuda_synchronize = torch.cuda.synchronize
+_original_torch_cuda_current_device = torch.cuda.current_device
+_original_torch_cuda_set_device = torch.cuda.set_device
+_original_torch_cuda_get_device_name = torch.cuda.get_device_name
+_original_torch_cuda_get_device_capability = torch.cuda.get_device_capability
+_original_torch_cuda_is_initialized = torch.cuda.is_initialized
+_original_torch_cuda_get_arch_list = torch.cuda.get_arch_list
+_original_torch_backends_cuda_is_built = torch.backends.cuda.is_built
+_original_torch_device = torch.device
+_original_torch_cuda_device = torch.cuda.device
 _original_torch_load = torch.load
 _original_tensor_cuda = torch.Tensor.cuda
 _original_module_cuda = torch.nn.Module.cuda
 _original_tensor_to = torch.Tensor.to
 _original_module_to = torch.nn.Module.to
+
+# Create a thread-local storage for a reentrancy flag.
+_thread_local = threading.local()
 
 @auto_log()
 def tensor_cuda_replacement(self, *args, **kwargs):

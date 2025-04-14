@@ -18,6 +18,7 @@ def _debug_type_info(obj):
         log_info(f"MRO: {obj.__class__.__mro__}")
     return obj
 
+
 # Save original device type
 _original_torch_cuda_device = torch.cuda.device
 
@@ -502,27 +503,42 @@ def mock_cuda_function_stub(default_device, *args, **kwargs):
 
 @auto_log()
 def tensor_creation_wrapper(original_func, default_device):
+    @auto_log()
     def wrapped_func(*args, **kwargs):
-        # If a device is explicitly provided:
-        if 'device' in kwargs and kwargs['device'] is not None:
-            device_arg = kwargs['device']
-            # Convert string specs into a standard form:
-            if isinstance(device_arg, str):
-                requested_device = device_arg.split(':')[0]
-                # If the requested device doesn't match the system default:
-                if requested_device != default_device:
-                    log_info(f"WARNING: Requested device '{requested_device}' is not available; redirecting to '{default_device}'")
-                    kwargs['device'] = default_device
-            # If it's a torch.device object:
-            elif hasattr(device_arg, 'type'):
-                requested_device = device_arg.type
-                if requested_device != default_device:
-                    log_info(f"WARNING: Requested device '{requested_device}' is not available; redirecting to '{default_device}'")
-                    kwargs['device'] = default_device
-        else:
-            # No device specified; use the system's default.
+        # Force the default device if no device is explicitly provided.
+        if 'device' not in kwargs or kwargs['device'] is None:
+            # Force the default device rather than letting PyTorch choose CPU.
             kwargs['device'] = default_device
-            log_info(f"Using default device '{default_device}' for tensor creation")
+            log_info(f"Using default device '{default_device}' for tensor creation in {original_func.__name__}")
+        else:
+            device_arg = kwargs['device']
+            if isinstance(device_arg, str):
+                normalized = device_arg.strip().lower()
+                if normalized == "cpu:-1":
+                    from ..TorchDevice import TorchDevice
+                    with TorchDevice._lock:
+                        TorchDevice._default_device = "cpu"
+                        TorchDevice._cpu_override = True
+                    # When explicitly overriding, use a valid CPU device call.
+                    kwargs['device'] = "cpu:0"
+                    log_info("Explicit CPU override requested; using 'cpu:0' in " + original_func.__name__)
+                else:
+                    # Enforce that any explicit CPU request is redirected to the accelerator.
+                    if normalized.startswith("cpu"):
+                        if ':' in device_arg:
+                            index = device_arg.split(':')[1]
+                            kwargs['device'] = f"{default_device}:{index}"
+                        else:
+                            kwargs['device'] = default_device
+                        log_info(f"Redirecting tensor creation from '{device_arg}' to '{default_device}' in " + original_func.__name__)
+            elif hasattr(device_arg, 'type'):
+                # Handle torch.device objects.
+                if device_arg.type == 'cpu':
+                    from ..TorchDevice import TorchDevice
+                    if not TorchDevice._cpu_override:
+                        index = getattr(device_arg, 'index', 0)
+                        kwargs['device'] = torch.device(default_device, index)
+                        log_info(f"Redirecting tensor creation from '{device_arg}' to '{default_device}' in " + original_func.__name__)
         return original_func(*args, **kwargs)
     return wrapped_func
     

@@ -28,9 +28,10 @@ from .modules.cuda_redirects import tensor_creation_wrapper
 # Save original torch functions
 _original_torch_device = torch.device
 
+
 class TorchDevice:
     _default_device = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
     _cpu_override = False
 
     @auto_log()
@@ -38,8 +39,6 @@ class TorchDevice:
         with self._lock:
             if self._default_device is None:
                 self.__class__._default_device = get_default_device()
-            if device_type is None:
-                device_type = self._default_device
             if isinstance(device_type, str):
                 if ':' in device_type:
                     device_type, index = device_type.split(':')
@@ -50,8 +49,6 @@ class TorchDevice:
                 device_str = f"{device_type}:{device_index}"
                 log_info(f"Creating torch.device('{device_str}')")
                 self.device = _original_torch_device(device_str)
-            else:
-                self.device = _original_torch_device(device_type)
 
     @auto_log()
     def __repr__(self):
@@ -65,72 +62,78 @@ class TorchDevice:
     def __getattr__(self, attr):
         return getattr(self.device, attr)
 
-    @auto_log()
     @classmethod
-    def torch_device_replacement(cls, device_type="", device_index=None):
+    @auto_log()
+    def torch_device_replacement(cls, *args, **kwargs):
         """
-        Replacement for torch.device that implements redirection logic.
-        If no device is provided, uses the cached default.
-        If a device string contains a colon, it is split into type and index.
-        If the requested device is 'cpu' with index -1, it toggles a CPU override.
-        Otherwise, it applies redirection (e.g. redirect 'cuda' to 'mps' if CUDA is not available)
-        and forces a default index of 0 when none is provided (for non‑CPU devices).
+        Drop-in replacement for torch.device() with device redirection and CPU override toggle.
+        • No arguments → returns default device.
+        • 'cpu:-1' → toggles CPU override.
+        • Redirects non-CPU devices to available hardware.
+        • Preserves extra args and kwargs.
         """
-        from .modules.device_detection import get_default_device, redirect_device_type
-
-        # Step 1: Normalize input.
-        if not device_type:
+        # No arguments → return default device
+        if not args and not kwargs:
             with cls._lock:
                 if cls._default_device is None:
                     cls._default_device = get_default_device()
-                device_type = cls._default_device
+                default = cls._default_device
+                if default.lower() == "cpu":
+                    return _original_torch_device(default)
+                return _original_torch_device(default, 0)
 
-        # Step 2: Extract device type and index.
-        if isinstance(device_type, _ORIGINAL_TORCH_DEVICE_TYPE):
-            dev_type = device_type.type.lower()
-            dev_index = device_type.index
-        elif isinstance(device_type, str):
-            if ":" in device_type:
-                parts = device_type.split(":", 1)
-                dev_type = parts[0].lower()
+        # If first argument is torch.device, return as-is
+        if args and isinstance(args[0], _ORIGINAL_TORCH_DEVICE_TYPE):
+            return args[0]
+
+        # If first argument is string device spec, parse and modify
+        if args and isinstance(args[0], str):
+            device_spec = args[0]
+            device_type = ""
+            device_index = None
+
+            if ":" in device_spec:
+                parts = device_spec.split(":", 1)
+                device_type = parts[0].lower()
                 try:
-                    dev_index = int(parts[1])
+                    device_index = int(parts[1])
                 except ValueError:
-                    dev_index = device_index
+                    device_index = None
             else:
-                dev_type = device_type.lower()
-                dev_index = device_index
-        else:
-            dev_type = str(device_type).lower()
-            dev_index = device_index
+                device_type = device_spec.lower()
 
-        # Step 3: Handle CPU override toggle.
-        if dev_type == "cpu" and dev_index == -1:
-            # Toggle CPU override.
-            def toggle_cpu_override():
-                with cls._lock:
-                    if not cls._cpu_override:
-                        cls._original_default = cls._default_device if cls._default_device is not None else get_default_device()
-                        cls._cpu_override = True
-                        cls._default_device = "cpu"
-                    else:
+            with cls._lock:
+                if cls._default_device is None:
+                    cls._default_device = get_default_device()
+
+                # CPU toggle logic
+                if device_type == "cpu" and device_index == -1:
+                    if cls._cpu_override:
+                        # Toggle OFF
                         cls._cpu_override = False
-                        if hasattr(cls, "_original_default"):
-                            cls._default_device = cls._original_default
-                return "cpu"
-            dev_type = toggle_cpu_override()
-            dev_index = 0  # For CPU, force index 0.
-        
-        # Step 4: Apply redirection logic.
-        # (redirect_device_type should check if e.g. 'cuda' is available and redirect to 'mps' if not.)
-        dev_type = redirect_device_type(dev_type, cls._cpu_override)
+                        device_type = cls._default_device
+                        device_index = None
+                    else:
+                        # Toggle ON
+                        cls._cpu_override = True
+                        device_type = "cpu"
+                        device_index = 0
 
-        # Step 5: If no index is provided for non-CPU devices, default to 0.
-        if dev_index is None and dev_type != "cpu":
-            dev_index = 0
+                # Apply redirection if no CPU override
+                if not cls._cpu_override:
+                    device_type = redirect_device_type(device_type)
 
-        # Step 6: Return the device using the original torch.device constructor.
-        return cls._original_torch_device(dev_type, dev_index)
+                # Reassemble args
+                new_arg = device_type
+                if device_index is not None:
+                    new_arg = f"{device_type}:{device_index}"
+
+                args = (new_arg,) + args[1:]  # Replace first arg
+
+        # Pass everything through to original torch.device
+        rvalue = _original_torch_device(*args, **kwargs)
+        return rvalue
+
 
     @classmethod
     @auto_log()
@@ -143,12 +146,28 @@ class TorchDevice:
         # Save the original torch.device constructor.
         _original_torch_device = torch.device
 
+        @auto_log()
         def patched_torch_device(*args, **kwargs):
-            # If called with no arguments, return the default device as determined by get_default_device()
+            """
+            A patched version of torch.device.
+            • If called with no arguments, returns the default device (for non‑CPU, forcing index 0).
+            • If called with arguments that look like a device specification (string or torch.device),
+            it routes them through our torch_device_replacement.
+            • Otherwise, it passes the arguments directly to the original constructor.
+            """
+            # _original_torch_device is assumed to be saved already.
             if not args and not kwargs:
                 default = get_default_device()
                 log_info(f"torch.device() called with no arguments; using default device '{default}'")
-                return _original_torch_device(default, 0)
+                if default.lower() == "cpu":
+                    device = _original_torch_device(default)
+                else:
+                    device = _original_torch_device(default, 0)
+            # If the first argument looks like a device specification, route through our replacement.
+            if args and (isinstance(args[0], str) or isinstance(args[0], _ORIGINAL_TORCH_DEVICE_TYPE)):
+                device = TorchDevice.torch_device_replacement(*args, **kwargs)
+                log_info(f"torch.device() called with arguments; replacement device '{device}' patched_torch_device")
+                return device
             return _original_torch_device(*args, **kwargs)
 
         # Patch torch.device globally.

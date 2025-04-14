@@ -1,0 +1,33 @@
+genmd INFO(20): Using base directory - .
+genmd WARNING(30): Specified configuration file "./utils/etc/combined_source.grc" creating new config file.
+genmd INFO(20): Writing config to ./utils/etc/combined_source.grc
+genmd INFO(20): Configuration saved to ./utils/etc/combined_source.grc
+genmd INFO(20): Generating directory and file structure, including: *.py test_*.py .bak.py test_tdlogger, excluding: .git tmp log __pycache__ .vscode backup bak run_ .mypy_cache .pytest_cache setup test_projects build demo examples utils original *.ico *.svg *.png *.pdf *.jpg *.htaccess *.webp *.jekyll .DS_Store *.JPG
+filetree WARNING(30): Configuration file not found: .exclusions.cfg
+genmd INFO(20): Regex: \.git|tmp|log|__pycache__|\.vscode|backup|bak|run_|\.mypy_cache|\.pytest_cache|setup|test_projects|build|demo|examples|utils|original
+genmd WARN(30): No patterns found for pattern_excludes
+genmd WARN(30): No patterns found for gitignore_excludes
+genmd WARN(30): No patterns found for gitignore_includes
+genmd INFO(20): Regex: .*\.ico|.*\.svg|.*\.png|.*\.pdf|.*\.jpg|.*\.htaccess|.*\.webp|.*\.jekyll|\.DS_Store|.*\.JPG
+genmd INFO(20): Regex: .*\.py|test_*\.py|\.bak\.py|test_tdlogger
+genmd INFO(20): Generating markdown for: ./tests/__init__.py
+genmd INFO(20): Generating markdown for: ./tests/common/__init__.py
+genmd INFO(20): Generating markdown for: ./tests/test_cpu_mps_operations.py
+genmd INFO(20): Generating markdown for: ./tests/test_cpu_operations.py
+genmd INFO(20): Generating markdown for: ./tests/test_cpu_override.py
+genmd INFO(20): Generating markdown for: ./tests/test_cuda_operations.py
+genmd INFO(20): Generating markdown for: ./tests/test_independent_model_trainet.py
+genmd INFO(20): Generating markdown for: ./tests/test_mps_operations.py
+genmd INFO(20): Generating markdown for: ./tests/test_submodule.py
+genmd INFO(20): Generating markdown for: ./tests/test_TorchDevice.py
+genmd INFO(20): Generating markdown for: ./TorchDevice/__init__.py
+genmd INFO(20): Skipping unknown empty type: "./TorchDevice/modules/__init__.py"
+genmd INFO(20): Generating markdown for: ./TorchDevice/modules/cuda_redirects.py
+genmd INFO(20): Generating markdown for: ./TorchDevice/modules/device_detection.py
+genmd INFO(20): Generating markdown for: ./TorchDevice/modules/patching.py
+genmd INFO(20): Generating markdown for: ./TorchDevice/modules/TDLogger.py
+genmd INFO(20): Generating markdown for: ./TorchDevice/TorchDevice.py
+genmd INFO(20): Document token count: 16551
+genmd INFO(20):        Output file: ./utils/output/combined_source.md
+genmd INFO(20): Configuration file: ./utils/etc/combined_source.grc
+genmd INFO(20):      Token count: 16551
