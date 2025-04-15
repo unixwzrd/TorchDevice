@@ -6,10 +6,10 @@ upon import.
 
 __version__ = '0.1.0'
 
-from .TorchDevice import TorchDevice, initialize_torchdevice
+from .TorchDevice import TorchDevice
 from .modules.TDLogger import auto_log
 
 # Automatically initialize TorchDevice to apply all patches.
-initialize_torchdevice()
+TorchDevice.apply_patches()
 
-__all__ = ['TorchDevice', 'initialize_torchdevice', 'auto_log', '__version__']
+__all__ = ['TorchDevice', 'auto_log', '__version__']

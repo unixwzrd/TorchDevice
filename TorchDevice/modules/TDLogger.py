@@ -47,7 +47,7 @@ def auto_log():
         def wrapper(*args, **kwargs):
             result = None
             if func.__name__ not in _INTERNAL_LOG_SKIP:
-                log_message(f"Called {func.__name__}", func.__name__)
+                log_message(f"Called {func.__name__}", "calling the entry now")
                 result = func(*args, **kwargs)
                 log_message(f"{func.__name__} returned {result}", func.__name__)
             else:

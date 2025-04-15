@@ -131,6 +131,7 @@ class TestMPSOperations(PrefixedTestCase):
         # Scenario 2: Forcing a genuine CPU tensor using the override.
         cpu_tensor = torch.randn(2, 3, device="cpu:-1")
         self.assertEqual(cpu_tensor.device.type, 'cpu')
+        tmp_dev = torch.device('cpu:-1')
 
         # Now convert the CPU tensor to MPS.
         converted_tensor = cpu_tensor.to(self.device)
