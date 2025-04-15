@@ -44,6 +44,8 @@ _device_type = None
 # Save original .to methods before patching
 _original_tensor_to = torch.Tensor.to
 _original_module_to = torch.nn.Module.to
+_original_tensor_cpu = torch.Tensor.cpu
+_original_module_cpu = torch.nn.Module.cpu
 
 def tensor_to_replacement(t, *args, **kwargs):
     if not isinstance(t, torch.Tensor):
@@ -85,8 +87,46 @@ def module_to_replacement(m, *args, **kwargs):
         return _original_module_to(m, **kwargs)
     return _original_module_to(m, *args, **kwargs)
 
+def tensor_cpu_replacement(t, *args, **kwargs):
+    # If override is active, return real CPU tensor
+    if getattr(TorchDevice, '_cpu_override', False):
+        return _original_tensor_cpu(t, *args, **kwargs)
+    default_device = TorchDevice.get_default_device()
+    if default_device == 'cpu':
+        return _original_tensor_cpu(t, *args, **kwargs)
+    return t.to(default_device)
+
+def module_cpu_replacement(m, *args, **kwargs):
+    if getattr(TorchDevice, '_cpu_override', False):
+        return _original_module_cpu(m, *args, **kwargs)
+    default_device = TorchDevice.get_default_device()
+    if default_device == 'cpu':
+        return _original_module_cpu(m, *args, **kwargs)
+    return m.to(default_device)
+
+# Optionally handle .mps() and .cuda() for cross-redirect
+if hasattr(torch.Tensor, 'mps'):
+    _original_tensor_mps = torch.Tensor.mps
+    def tensor_mps_replacement(t, *args, **kwargs):
+        default_device = TorchDevice.get_default_device()
+        if default_device == 'mps':
+            return _original_tensor_mps(t, *args, **kwargs)
+        return t.to(default_device)
+    torch.Tensor.mps = tensor_mps_replacement
+
+if hasattr(torch.nn.Module, 'mps'):
+    _original_module_mps = torch.nn.Module.mps
+    def module_mps_replacement(m, *args, **kwargs):
+        default_device = TorchDevice.get_default_device()
+        if default_device == 'mps':
+            return _original_module_mps(m, *args, **kwargs)
+        return m.to(default_device)
+    torch.nn.Module.mps = module_mps_replacement
+
 torch.Tensor.to = _original_tensor_to
 torch.nn.Module.to = _original_module_to
+torch.Tensor.cpu = _original_tensor_cpu
+torch.nn.Module.cpu = _original_module_cpu
 
 # --- AMP Hooks ---
 if hasattr(torch.cuda, 'amp'):
@@ -789,6 +829,16 @@ class TorchDevice:
         # Patch .to methods with standalone functions
         torch.Tensor.to = tensor_to_replacement
         torch.nn.Module.to = module_to_replacement
+
+        # Patch .cpu methods
+        torch.Tensor.cpu = tensor_cpu_replacement
+        torch.nn.Module.cpu = module_cpu_replacement
+
+        # Patch .mps methods if present
+        if hasattr(torch.Tensor, 'mps'):
+            torch.Tensor.mps = tensor_mps_replacement
+        if hasattr(torch.nn.Module, 'mps'):
+            torch.nn.Module.mps = module_mps_replacement
 
         torch.cuda.Event = MPSEvent
         torch.cuda.Stream = cls.mock_cuda_stream_class

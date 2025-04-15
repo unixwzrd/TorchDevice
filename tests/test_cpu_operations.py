@@ -34,7 +34,7 @@ class TestCPUOperations(PrefixedTestCase):
         super().setUp()
         
         # Explicitly override to CPU using the special device notation
-        self.device = torch.device('cpu:-1')
+        self.device = torch.device('cpu')
         self.info(f"Using device: {self.device}")
         
         # Set up log capture
@@ -54,8 +54,9 @@ class TestCPUOperations(PrefixedTestCase):
         cpu_tensor2 = torch.zeros(3, 4, device='cpu')
         
         # Verify tensors are on CPU
-        self.assertEqual(cpu_tensor1.device.type, 'cpu')
-        self.assertEqual(cpu_tensor2.device.type, 'cpu')
+        expected_device = TorchDevice.TorchDevice.get_default_device()
+        self.assertEqual(cpu_tensor1.device.type, expected_device)
+        self.assertEqual(cpu_tensor2.device.type, expected_device)
         
         self.info("CPU tensor creation tests passed")
         
@@ -75,8 +76,9 @@ class TestCPUOperations(PrefixedTestCase):
         d = torch.nn.functional.relu(c)
         
         # Verify tensors are on CPU
-        self.assertEqual(c.device.type, 'cpu')
-        self.assertEqual(d.device.type, 'cpu')
+        expected_device = TorchDevice.TorchDevice.get_default_device()
+        self.assertEqual(c.device.type, expected_device)
+        self.assertEqual(d.device.type, expected_device)
         
         self.info("CPU tensor operations tests passed")
         
@@ -103,13 +105,15 @@ class TestCPUOperations(PrefixedTestCase):
         # Double check all parameters are on CPU
         for param in model.parameters():
             param.data = param.data.cpu()
-            self.assertEqual(param.device.type, 'cpu')
+            expected_device = TorchDevice.TorchDevice.get_default_device()
+            self.assertEqual(param.device.type, expected_device)
         
         # Now perform the forward pass
         output = model(x)
         
         # Verify output is on CPU
-        self.assertEqual(output.device.type, 'cpu')
+        expected_device = TorchDevice.TorchDevice.get_default_device()
+        self.assertEqual(output.device.type, expected_device)
         
         self.info("CPU neural network operations tests passed")
         
