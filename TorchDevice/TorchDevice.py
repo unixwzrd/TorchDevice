@@ -41,93 +41,6 @@ _ORIGINAL_TORCH_DEVICE_TYPE = torch.device("cpu").__class__
 _CACHED_DEFAULT_DEVICE = None
 _device_type = None
 
-# Save original .to methods before patching
-_original_tensor_to = torch.Tensor.to
-_original_module_to = torch.nn.Module.to
-_original_tensor_cpu = torch.Tensor.cpu
-_original_module_cpu = torch.nn.Module.cpu
-
-def tensor_to_replacement(t, *args, **kwargs):
-    if not isinstance(t, torch.Tensor):
-        raise TypeError(f"tensor_to_replacement called on non-tensor object: {type(t)}")
-    device_in_args = args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_TYPE))
-    device_in_kwargs = 'device' in kwargs and isinstance(kwargs['device'], (str, _ORIGINAL_TORCH_DEVICE_TYPE))
-    if not device_in_args and not device_in_kwargs:
-        return _original_tensor_to(t, *args, **kwargs)
-    if device_in_args:
-        first_arg = args[0]
-        device = TorchDevice.torch_device_replacement(first_arg)
-        new_args = (device,) + args[1:]
-        kwargs.pop('device', None)
-        return _original_tensor_to(t, *new_args, **kwargs)
-    if device_in_kwargs:
-        dev = kwargs['device']
-        device = TorchDevice.torch_device_replacement(dev)
-        kwargs['device'] = device
-        return _original_tensor_to(t, **kwargs)
-    return _original_tensor_to(t, *args, **kwargs)
-
-def module_to_replacement(m, *args, **kwargs):
-    if not isinstance(m, torch.nn.Module):
-        raise TypeError(f"module_to_replacement called on non-module object: {type(m)}")
-    device_in_args = args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_TYPE))
-    device_in_kwargs = 'device' in kwargs and isinstance(kwargs['device'], (str, _ORIGINAL_TORCH_DEVICE_TYPE))
-    if not device_in_args and not device_in_kwargs:
-        return _original_module_to(m, *args, **kwargs)
-    if device_in_args:
-        first_arg = args[0]
-        device = TorchDevice.torch_device_replacement(first_arg)
-        new_args = (device,) + args[1:]
-        kwargs.pop('device', None)
-        return _original_module_to(m, *new_args, **kwargs)
-    if device_in_kwargs:
-        dev = kwargs['device']
-        device = TorchDevice.torch_device_replacement(dev)
-        kwargs['device'] = device
-        return _original_module_to(m, **kwargs)
-    return _original_module_to(m, *args, **kwargs)
-
-def tensor_cpu_replacement(t, *args, **kwargs):
-    # If override is active, return real CPU tensor
-    if getattr(TorchDevice, '_cpu_override', False):
-        return _original_tensor_cpu(t, *args, **kwargs)
-    default_device = TorchDevice.get_default_device()
-    if default_device == 'cpu':
-        return _original_tensor_cpu(t, *args, **kwargs)
-    return t.to(default_device)
-
-def module_cpu_replacement(m, *args, **kwargs):
-    if getattr(TorchDevice, '_cpu_override', False):
-        return _original_module_cpu(m, *args, **kwargs)
-    default_device = TorchDevice.get_default_device()
-    if default_device == 'cpu':
-        return _original_module_cpu(m, *args, **kwargs)
-    return m.to(default_device)
-
-# Optionally handle .mps() and .cuda() for cross-redirect
-if hasattr(torch.Tensor, 'mps'):
-    _original_tensor_mps = torch.Tensor.mps
-    def tensor_mps_replacement(t, *args, **kwargs):
-        default_device = TorchDevice.get_default_device()
-        if default_device == 'mps':
-            return _original_tensor_mps(t, *args, **kwargs)
-        return t.to(default_device)
-    torch.Tensor.mps = tensor_mps_replacement
-
-if hasattr(torch.nn.Module, 'mps'):
-    _original_module_mps = torch.nn.Module.mps
-    def module_mps_replacement(m, *args, **kwargs):
-        default_device = TorchDevice.get_default_device()
-        if default_device == 'mps':
-            return _original_module_mps(m, *args, **kwargs)
-        return m.to(default_device)
-    torch.nn.Module.mps = module_mps_replacement
-
-torch.Tensor.to = _original_tensor_to
-torch.nn.Module.to = _original_module_to
-torch.Tensor.cpu = _original_tensor_cpu
-torch.nn.Module.cpu = _original_module_cpu
-
 # --- AMP Hooks ---
 if hasattr(torch.cuda, 'amp'):
     _original_autocast = torch.cuda.amp.autocast
@@ -152,13 +65,15 @@ if hasattr(torch.cuda, 'amp'):
         torch.cuda.amp.GradScaler = GradScalerReplacement
 
 # --- TorchDevice Class with Patched CUDA Functions ---
-
-
 class TorchDevice:
     _default_device = None
-    _lock = threading.Lock()
+    _previous_default_device = None
+    _lock = threading.RLock()
     _cpu_override = False  # Flag for explicit CPU override
 
+    _original_tensor_to = torch.Tensor.to
+    _original_module_to = torch.nn.Module.to
+    _original_module_cpu = torch.nn.Module.cpu
     _original_module_cuda = torch.nn.Module.cuda
     _original_tensor_cuda = torch.Tensor.cuda
     _original_torch_backends_cuda_is_built = torch.backends.cuda.is_built
@@ -235,6 +150,11 @@ class TorchDevice:
 
 
     @classmethod
+    def cpu_override_set(cls):
+        return cls._cpu_override
+
+
+    @classmethod
     @auto_log()
     def redirect_device_type(cls, device_type):
         """
@@ -248,18 +168,18 @@ class TorchDevice:
         
         if device_type.startswith('cuda'):
             if _CACHED_DEFAULT_DEVICE == 'cuda':
-                return 'cuda'
+                device_type = 'cuda'
             elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-                return 'mps'
+                device_type = 'mps'
             else:
-                return 'cpu'
+                device_type = 'cpu'
         elif device_type.startswith('mps'):
             if _CACHED_DEFAULT_DEVICE == 'mps':
-                return 'mps'
+                device_type = 'mps'
             elif cls._original_torch_cuda_is_available():
-                return 'cuda'
+                device_type = 'cuda'
             else:
-                return 'cpu'
+                device_type = 'cpu'
         return device_type
 
     @classmethod
@@ -284,36 +204,84 @@ class TorchDevice:
             return original_func(*args, **kwargs)
         return wrapped_func
 
+    @staticmethod
+    def tensor_to_replacement(t, *args, **kwargs):
+        if not isinstance(t, torch.Tensor):
+            raise TypeError(f"tensor_to_replacement called on non-tensor object: {type(t)}")
+        if args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            device = TorchDevice.torch_device_replacement(args[0])
+            new_args = (device,) + args[1:]
+            kwargs.pop('device', None)
+            return TorchDevice._original_tensor_to(t, *new_args, **kwargs)
+        elif 'device' in kwargs and isinstance(kwargs['device'], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            device = TorchDevice.torch_device_replacement(kwargs['device'])
+            kwargs['device'] = device
+            return TorchDevice._original_tensor_to(t, *args, **kwargs)
+        else:
+            return TorchDevice._original_tensor_to(t, *args, **kwargs)
+
+    @staticmethod
+    def module_to_replacement(m, *args, **kwargs):
+        if not isinstance(m, torch.nn.Module):
+            raise TypeError(f"module_to_replacement called on non-module object: {type(m)}")
+        if args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            device = TorchDevice.torch_device_replacement(args[0])
+            new_args = (device,) + args[1:]
+            kwargs.pop('device', None)
+            return TorchDevice._original_module_to(m, *new_args, **kwargs)
+        elif 'device' in kwargs and isinstance(kwargs['device'], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            device = TorchDevice.torch_device_replacement(kwargs['device'])
+            kwargs['device'] = device
+            return TorchDevice._original_module_to(m, *args, **kwargs)
+        else:
+            return TorchDevice._original_module_to(m, *args, **kwargs)
+
     @classmethod
     @auto_log()
     def torch_device_replacement(cls, *args, **kwargs) -> torch.device:
         """
         Drop-in replacement for torch.device() with device redirection and CPU override toggle.
         • No arguments → returns default device (or CPU if override is active).
-        • 'cpu:-1' → toggles CPU override.
+        • 'cpu:-1' or torch.device('cpu', -1) → toggles CPU override.
         • Redirects non-CPU devices to available hardware.
         • Preserves extra args and kwargs.
         Always returns a torch.device object.
         """
-        log_info(f"[torch_device_replacement] Called with args={args}, kwargs={kwargs}")
+        global _CACHED_DEFAULT_DEVICE
+        log_info(f"Called with args={args}, kwargs={kwargs}")
         with cls._lock:
             if cls._default_device is None:
                 cls._default_device = cls.get_default_device()
             # If no args, return device based on override
             if not args and not kwargs:
                 if cls._cpu_override:
-                    log_info(f"[torch_device_replacement] Override active, returning CPU device")
+                    log_info("Override active, returning CPU device")
                     result = cls._original_torch_device('cpu')
                 else:
-                    default = cls._default_device
-                    log_info(f"[torch_device_replacement] No args, using default device: {default}")
+                    default = cls.get_default_device()
+                    log_info(f"No args, using default device: {default}")
                     result = cls._original_torch_device(default, 0) if default.lower() != "cpu" else cls._original_torch_device(default)
                 assert isinstance(result, _ORIGINAL_TORCH_DEVICE_TYPE), f"Expected torch.device, got {type(result)}"
                 return result
 
-            # If first argument is torch.device, return as-is
+            # If first argument is torch.device, check for override
             if args and isinstance(args[0], _ORIGINAL_TORCH_DEVICE_TYPE):
-                log_info(f"[torch_device_replacement] First arg is already torch.device: {args[0]}")
+                dev = args[0]
+                if dev.type == 'cpu' and dev.index == -1:
+                    if cls.cpu_override_set():
+                        # Toggle OFF
+                        cls._cpu_override = False
+                        _CACHED_DEFAULT_DEVICE = cls._previous_default_device
+                        cls._previous_device = None
+                        log_info("CPU override toggled OFF (torch.device object)")
+                    else:
+                        # Toggle ON
+                        cls._cpu_override = True
+                        cls._previous_default_device = _CACHED_DEFAULT_DEVICE
+                        _CACHED_DEFAULT_DEVICE = 'cpu'
+                        log_info("CPU override toggled ON (torch.device object)")
+                    return cls._original_torch_device('cpu')
+                log_info(f"First arg is already torch.device: {args[0]}")
                 assert isinstance(args[0], _ORIGINAL_TORCH_DEVICE_TYPE), f"Expected torch.device, got {type(args[0])}"
                 return args[0]
 
@@ -335,43 +303,50 @@ class TorchDevice:
 
                 # CPU override toggle logic
                 if device_type == "cpu" and device_index == -1:
-                    if cls._cpu_override:
+                    if cls.cpu_override_set():
                         # Toggle OFF
                         cls._cpu_override = False
-                        log_info("[torch_device_replacement] CPU override toggled OFF")
+                        _CACHED_DEFAULT_DEVICE = cls._previous_default_device
+                        cls._previous_device = None
+                        log_info("CPU override toggled OFF")
                         device_type = cls._default_device
                         device_index = 0 if device_type != "cpu" else None
                     else:
                         # Toggle ON
                         cls._cpu_override = True
-                        log_info("[torch_device_replacement] CPU override toggled ON")
+                        cls._previous_default_device = _CACHED_DEFAULT_DEVICE
+                        _CACHED_DEFAULT_DEVICE = 'cpu'
+                        log_info("CPU override toggled ON")
                         device_type = "cpu"
                         device_index = 0
 
-                # Redirection logic
-                if not cls._cpu_override:
-                    # Only redirect if not in override mode
-                    if device_type == "cpu":
-                        device_type = cls._default_device
-                        device_index = 0 if device_type != "cpu" else None
-                        log_info(f"[torch_device_replacement] Redirected 'cpu' to default device: {device_type}")
-                    elif device_type in ("cuda", "mps"):
-                        redirected = cls.redirect_device_type(device_type)
-                        log_info(f"[torch_device_replacement] Redirected device_type: {device_type} -> {redirected}")
-                        device_type = redirected
-                        device_index = 0 if device_type != "cpu" else None
+                # Always enforce CPU override for all device requests
+                if cls.cpu_override_set():
+                    device_type = "cpu"
+                    device_index = None
+
+                # Redirection logic (only applies if override is not active)
+                elif device_type == "cpu":
+                    device_type = cls.get_default_device()
+                    device_index = 0 if device_type != "cpu" else None
+                    log_info(f"Redirected 'cpu' to default device: {device_type}")
+                elif device_type in ("cuda", "mps"):
+                    redirected = cls.redirect_device_type(device_type)
+                    log_info(f"Redirected device_type: {device_type} -> {redirected}")
+                    device_type = redirected
+                    device_index = 0 if device_type != "cpu" else None
 
                 # Reassemble args
                 new_arg = device_type
                 if device_index is not None:
                     new_arg = f"{device_type}:{device_index}"
                 args = (new_arg,) + args[1:]
-                log_info(f"[torch_device_replacement] Reassembled args: {args}")
+                log_info(f"Reassembled args: {args}")
 
         # Always return a torch.device object
         result = cls._original_torch_device(*args, **kwargs)
         assert isinstance(result, _ORIGINAL_TORCH_DEVICE_TYPE), f"Expected torch.device, got {type(result)}"
-        log_info(f"[torch_device_replacement] Returning device: {result}")
+        log_info(f"Returning device: {result}")
         return result
 
     @classmethod
@@ -827,18 +802,14 @@ class TorchDevice:
         torch.nn.Module.cuda = cls.module_cuda_replacement
 
         # Patch .to methods with standalone functions
-        torch.Tensor.to = tensor_to_replacement
-        torch.nn.Module.to = module_to_replacement
-
-        # Patch .cpu methods
-        torch.Tensor.cpu = tensor_cpu_replacement
-        torch.nn.Module.cpu = module_cpu_replacement
+        torch.Tensor.to = cls.tensor_to_replacement
+        torch.nn.Module.to = cls.module_to_replacement
 
         # Patch .mps methods if present
         if hasattr(torch.Tensor, 'mps'):
-            torch.Tensor.mps = tensor_mps_replacement
+            torch.Tensor.mps = cls.tensor_mps_replacement
         if hasattr(torch.nn.Module, 'mps'):
-            torch.nn.Module.mps = module_mps_replacement
+            torch.nn.Module.mps = cls.module_mps_replacement
 
         torch.cuda.Event = MPSEvent
         torch.cuda.Stream = cls.mock_cuda_stream_class
@@ -915,6 +886,7 @@ class TorchDevice:
         for func_name in unsupported_functions:
             if hasattr(torch.cuda, func_name):
                 setattr(torch.cuda, func_name, cls.mock_cuda_function_stub)
+
 
 # Apply patches when the module is imported
 TorchDevice.apply_patches()
