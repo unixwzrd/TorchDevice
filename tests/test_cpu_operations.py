@@ -99,13 +99,12 @@ class TestCPUOperations(PrefixedTestCase):
             torch.nn.Linear(5, 1)
         )
         
-        # First move model to CPU explicitly
-        model = model.cpu()
+        # Move model to the hardware default device using .to()
+        expected_device = TorchDevice.TorchDevice.get_default_device()
+        model = model.to(expected_device)
         
-        # Double check all parameters are on CPU
+        # Double check all parameters are on the expected device
         for param in model.parameters():
-            param.data = param.data.cpu()
-            expected_device = TorchDevice.TorchDevice.get_default_device()
             self.assertEqual(param.device.type, expected_device)
         
         # Now perform the forward pass
