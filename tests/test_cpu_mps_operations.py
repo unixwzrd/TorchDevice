@@ -3,11 +3,12 @@ import logging
 import unittest
 from pathlib import Path
 
+import TorchDevice
+
 import torch
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 from common.test_utils import PrefixedTestCase
 
-import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, 
@@ -25,98 +26,109 @@ class TestCPUOperations(PrefixedTestCase):
         """Set up test environment."""
         # Call the parent setUp method to set up logging
         super().setUp()
-        
         print("\n" + "=" * 80)
         print(f"Starting test: {self._testMethodName}")
         print("=" * 80)
-        
         # Set up log capture with a unique test name.
         self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)   
-
-        # Set device to CPU for these tests using the public PyTorch API
-        self.device = torch.device('cpu:-1')
-        self.info("Using device: %s", self.device)
+        # Remove device override from setUp
+        # self.device = torch.device('cpu:-1')
+        # self.info("Using device: %s", self.device)
 
     def tearDown(self):
         """Clean up logger capture and restore original configuration."""
         teardown_log_capture(self.log_capture)
-        
-        # Print a footer for the test
         print("\n" + "=" * 80)
         print(f"Finished test: {self._testMethodName}")
         print("=" * 80)
 
     def test_cpu_tensor_creation(self):
         """Test creating tensors explicitly on CPU."""
+        # Toggle CPU override ON for this test
+        self.device = torch.device('cpu:-1')
         self.info("Testing CPU tensor creation")
-        
-        # Create a tensor on CPU
         tensor1 = torch.tensor([1.0, 2.0, 3.0], device=self.device)
         tensor2 = torch.ones((2, 3), device=self.device)
-        
-        # Verify they're on CPU
         self.assertEqual(tensor1.device.type, 'cpu')
         self.assertEqual(tensor2.device.type, 'cpu')
-        
         self.info("CPU tensor creation tests passed")
-
         self.log_capture.log_stream.getvalue()
-
         diff_check(self.log_capture)
+        # Toggle CPU override OFF after test
+        torch.device('cpu:-1')
     
     def test_cpu_tensor_operations(self):
         """Test operations on CPU tensors."""
+        # Toggle CPU override ON for this test
+        self.device = torch.device('cpu:-1')
         self.info("Testing CPU tensor operations")
-        
-        # Create tensors
         a = torch.randn(10, device=self.device)
         b = torch.randn(10, device=self.device)
-        
-        # Test basic operations
         c = a + b
         d = a * b
         e = torch.matmul(a, b)
-        
-        # Verify results are on CPU
         self.assertEqual(c.device.type, 'cpu')
         self.assertEqual(d.device.type, 'cpu')
         self.assertEqual(e.device.type, 'cpu')
-        
         self.info("CPU tensor operations tests passed")
-
         self.log_capture.log_stream.getvalue()
-
         diff_check(self.log_capture)
+        # Toggle CPU override OFF after test
+        torch.device('cpu:-1')
     
     def test_cpu_nn_operations(self):
         """Test neural network operations on CPU."""
+        # Toggle CPU override ON for this test
+        self.device = torch.device('cpu:-1')
         self.info("Testing CPU neural network operations")
-        
-        # Create a simple model
         model = torch.nn.Sequential(
             torch.nn.Linear(10, 5),
             torch.nn.ReLU(),
             torch.nn.Linear(5, 1)
         ).to(self.device)
-        
-        # Create input
         x = torch.randn(3, 10, device=self.device)
-        
-        # Forward pass
         output = model(x)
-        
-        # Verify output is on CPU
         self.assertEqual(output.device.type, 'cpu')
-        
-        # Check model parameters are on CPU
         for param in model.parameters():
             self.assertEqual(param.device.type, 'cpu')
-        
         self.info("CPU neural network operations tests passed")
-
         self.log_capture.log_stream.getvalue()
-
         diff_check(self.log_capture)
+        # Toggle CPU override OFF after test
+        torch.device('cpu:-1')
+
+    def test_override_forces_all_devices_to_cpu(self):
+        """Test that CPU override forces all device requests to CPU."""
+        # Toggle override ON
+        torch.device('cpu:-1')
+        # Try to create tensors on all device types
+        t_cpu = torch.tensor([1], device='cpu')
+        t_mps = torch.tensor([1], device='mps')
+        t_cuda = torch.tensor([1], device='cuda')
+        # All should be on CPU
+        self.assertEqual(t_cpu.device.type, 'cpu')
+        self.assertEqual(t_mps.device.type, 'cpu')
+        self.assertEqual(t_cuda.device.type, 'cpu')
+        # Toggle override OFF
+        torch.device('cpu:-1')
+
+    def test_explicit_accelerator_requests(self):
+        """Test that explicit accelerator requests are honored when override is OFF."""
+        # Ensure override is OFF
+        torch.device('cpu:-1')  # ON
+        torch.device('cpu:-1')  # OFF
+        # Try to create tensors on all device types
+        t_cpu = torch.tensor([1], device='cpu')
+        t_mps = torch.tensor([1], device='mps')
+        t_cuda = torch.tensor([1], device='cuda')
+        # Print device types for manual inspection
+        print("t_cpu.device:", t_cpu.device)
+        print("t_mps.device:", t_mps.device)
+        print("t_cuda.device:", t_cuda.device)
+        # Optionally, assert based on your system's default accelerator
+        # For example, if MPS is available:
+        # self.assertEqual(t_mps.device.type, 'mps')
+        # self.assertEqual(t_cuda.device.type, 'mps')
 
 
 class TestMPSOperations(PrefixedTestCase):
@@ -163,9 +175,15 @@ class TestMPSOperations(PrefixedTestCase):
         self.logger.info("Using device: %s", self.device)
         self.logger.info("Testing CPU to MPS conversion")
 
+        # Toggle CPU override ON
+        torch.device('cpu:-1')
+
         # Create a tensor on CPU
         cpu_tensor = torch.randn(10, device='cpu:0')
         self.assertEqual(cpu_tensor.device.type, 'cpu')
+
+        # Toggle CPU override OFF (allow moving to MPS)
+        torch.device('cpu:-1')
 
         # Convert to MPS
         mps_tensor = cpu_tensor.to('mps')

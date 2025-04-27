@@ -39,6 +39,9 @@ TorchDevice intercepts all Torch method and function calls and redirects device 
 - **Device Index:**  
   The device index is an integer that specifies the device number. The default device index is 0. On CPU and MPS devices, the index is fixed at 0 (except in special cases), while for CUDA devices it corresponds to the GPU number to use.
 
+- **Device Index Handling:**
+  For CPU and MPS devices, PyTorch typically sets the device index to `None` unless an explicit index is provided (e.g., 'mps:0'). TorchDevice defaults the index to `0` for consistency and migration-friendliness, but both `None` and `0` are treated equivalently for these device types. This ensures predictable behavior and compatibility, even if future hardware supports multiple devices.
+
 ### Examples
 
 - **Implicit Tensor Creation:**  
@@ -77,3 +80,16 @@ TorchDevice intercepts all Torch method and function calls and redirects device 
 ### Scope of Redirection
 
 The redirection enforced by TorchDevice is global within the current process or session. This means that once the default accelerator is determined (and unless explicitly overridden), all tensor creation and device conversion calls will adhere to these rules.
+
+For functions which are not directly supported by the TorchDevice module, the original function is called and masqueraded as though it was running on the desired hardware.  That is CUDA calls will respond as CUDA calls but the information will be MPS specific.
+
+
+| Function Type | Masquerade? | Example Implementation |
+|---------------------- |:-----------:|---------------------------------------|
+| Device queries | Yes | Return MPS info as CUDA |
+| Memory queries | Yes | Use psutil or torch.mps |
+| Streams/events | Yes | Provide MPS-backed or dummy objects |
+| Mathematic operations | Yes | Use MPS-compatible operations |
+| CUDA-only features | No | Stub or raise NotImplementedError |
+
+NOTE: WIll need to find  a graceful method of handling CUDA only functions on MPS.

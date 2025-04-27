@@ -1,33 +1,1317 @@
-genmd INFO(20): Using base directory - .
-genmd WARNING(30): Specified configuration file "./utils/etc/combined_source.grc" creating new config file.
-genmd INFO(20): Writing config to ./utils/etc/combined_source.grc
-genmd INFO(20): Configuration saved to ./utils/etc/combined_source.grc
-genmd INFO(20): Generating directory and file structure, including: *.py test_*.py .bak.py test_tdlogger, excluding: .git tmp log __pycache__ .vscode backup bak run_ .mypy_cache .pytest_cache setup test_projects build demo examples utils original *.ico *.svg *.png *.pdf *.jpg *.htaccess *.webp *.jekyll .DS_Store *.JPG
-filetree WARNING(30): Configuration file not found: .exclusions.cfg
-genmd INFO(20): Regex: \.git|tmp|log|__pycache__|\.vscode|backup|bak|run_|\.mypy_cache|\.pytest_cache|setup|test_projects|build|demo|examples|utils|original
-genmd WARN(30): No patterns found for pattern_excludes
-genmd WARN(30): No patterns found for gitignore_excludes
-genmd WARN(30): No patterns found for gitignore_includes
-genmd INFO(20): Regex: .*\.ico|.*\.svg|.*\.png|.*\.pdf|.*\.jpg|.*\.htaccess|.*\.webp|.*\.jekyll|\.DS_Store|.*\.JPG
-genmd INFO(20): Regex: .*\.py|test_*\.py|\.bak\.py|test_tdlogger
-genmd INFO(20): Generating markdown for: ./tests/__init__.py
-genmd INFO(20): Generating markdown for: ./tests/common/__init__.py
-genmd INFO(20): Generating markdown for: ./tests/test_cpu_mps_operations.py
-genmd INFO(20): Generating markdown for: ./tests/test_cpu_operations.py
-genmd INFO(20): Generating markdown for: ./tests/test_cpu_override.py
-genmd INFO(20): Generating markdown for: ./tests/test_cuda_operations.py
-genmd INFO(20): Generating markdown for: ./tests/test_independent_model_trainet.py
-genmd INFO(20): Generating markdown for: ./tests/test_mps_operations.py
-genmd INFO(20): Generating markdown for: ./tests/test_submodule.py
-genmd INFO(20): Generating markdown for: ./tests/test_TorchDevice.py
-genmd INFO(20): Generating markdown for: ./TorchDevice/__init__.py
-genmd INFO(20): Skipping unknown empty type: "./TorchDevice/modules/__init__.py"
-genmd INFO(20): Generating markdown for: ./TorchDevice/modules/cuda_redirects.py
-genmd INFO(20): Generating markdown for: ./TorchDevice/modules/device_detection.py
-genmd INFO(20): Generating markdown for: ./TorchDevice/modules/patching.py
-genmd INFO(20): Generating markdown for: ./TorchDevice/modules/TDLogger.py
-genmd INFO(20): Generating markdown for: ./TorchDevice/TorchDevice.py
-genmd INFO(20): Document token count: 16551
-genmd INFO(20):        Output file: ./utils/output/combined_source.md
-genmd INFO(20): Configuration file: ./utils/etc/combined_source.grc
-genmd INFO(20):      Token count: 16551
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py', '--update-expected']
+EF.2025-04-22 12:56:35,373 - __main__ - INFO - Using device: cpu (expected type: mps)
+2025-04-22 12:56:35,373 - __main__ - INFO - Using device: cpu
+2025-04-22 12:56:35,373 - __main__ - INFO - Testing CPU to MPS conversion
+E2025-04-22 12:56:35,392 - __main__ - INFO - Using device: cpu (expected type: mps)
+2025-04-22 12:56:35,392 - __main__ - INFO - Testing MPS device properties
+F2025-04-22 12:56:35,392 - __main__ - INFO - Using device: cpu (expected type: mps)
+2025-04-22 12:56:35,392 - __main__ - INFO - Testing MPS neural network operations
+E2025-04-22 12:56:35,413 - __main__ - INFO - Using device: cpu (expected type: mps)
+2025-04-22 12:56:35,413 - __main__ - INFO - Testing MPS tensor creation
+F2025-04-22 12:56:35,414 - __main__ - INFO - Using device: cpu (expected type: mps)
+2025-04-22 12:56:35,414 - __main__ - INFO - Testing MPS tensor operations
+F
+======================================================================
+ERROR: test_cpu_nn_operations (__main__.TestCPUOperations.test_cpu_nn_operations)
+Test neural network operations on CPU.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 100, in test_cpu_nn_operations
+    ).to(self.device)
+      ^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+ERROR: test_cpu_to_mps_conversion (__main__.TestMPSOperations.test_cpu_to_mps_conversion)
+Test converting tensors from CPU to MPS.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 171, in test_cpu_to_mps_conversion
+    mps_tensor = cpu_tensor.to('mps')
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 115, in tensor_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+ERROR: test_mps_nn_operations (__main__.TestMPSOperations.test_mps_nn_operations)
+Test neural network operations on MPS.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 255, in test_mps_nn_operations
+    ).to(self.device)  # Use self.device
+      ^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+FAIL: test_cpu_tensor_creation (__main__.TestCPUOperations.test_cpu_tensor_creation)
+Test creating tensors explicitly on CPU.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 58, in test_cpu_tensor_creation
+    self.assertEqual(tensor1.device.type, 'cpu')
+AssertionError: 'mps' != 'cpu'
+- mps
++ cpu
+
+
+======================================================================
+FAIL: test_mps_device_properties (__main__.TestMPSOperations.test_mps_device_properties)
+Test MPS device properties.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 188, in test_mps_device_properties
+    self.assertEqual(device.type, self.expected_type)
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+======================================================================
+FAIL: test_mps_tensor_creation (__main__.TestMPSOperations.test_mps_tensor_creation)
+Test creating tensors explicitly on MPS.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 211, in test_mps_tensor_creation
+    self.assertEqual(tensor1.device.type, self.expected_type)
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+======================================================================
+FAIL: test_mps_tensor_operations (__main__.TestMPSOperations.test_mps_tensor_operations)
+Test operations on MPS tensors.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py", line 236, in test_mps_tensor_operations
+    self.assertEqual(c.device.type, self.expected_type)
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.129s
+
+FAILED (failures=4, errors=3)
+
+================================================================================
+Starting test: test_cpu_nn_operations
+================================================================================
+
+================================================================================
+Starting test: test_cpu_nn_operations
+================================================================================
+TEST INFO - TestCPUOperations.test_cpu_nn_operations: Using device: cpu
+TEST INFO - TestCPUOperations.test_cpu_nn_operations: Testing CPU neural network operations
+
+================================================================================
+Finished test: test_cpu_nn_operations
+================================================================================
+
+================================================================================
+Starting test: test_cpu_tensor_creation
+================================================================================
+
+================================================================================
+Starting test: test_cpu_tensor_creation
+================================================================================
+TEST INFO - TestCPUOperations.test_cpu_tensor_creation: Using device: mps:0
+TEST INFO - TestCPUOperations.test_cpu_tensor_creation: Testing CPU tensor creation
+
+================================================================================
+Finished test: test_cpu_tensor_creation
+================================================================================
+
+================================================================================
+Starting test: test_cpu_tensor_operations
+================================================================================
+
+================================================================================
+Starting test: test_cpu_tensor_operations
+================================================================================
+TEST INFO - TestCPUOperations.test_cpu_tensor_operations: Using device: cpu
+TEST INFO - TestCPUOperations.test_cpu_tensor_operations: Testing CPU tensor operations
+TEST INFO - TestCPUOperations.test_cpu_tensor_operations: CPU tensor operations tests passed
+Updated expected output file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_tensor_operations_expected.log
+
+================================================================================
+Finished test: test_cpu_tensor_operations
+================================================================================
+
+================================================================================
+Starting test: test_cpu_to_mps_conversion
+================================================================================
+
+================================================================================
+Starting test: test_cpu_to_mps_conversion
+================================================================================
+
+================================================================================
+Finished test: test_cpu_to_mps_conversion
+================================================================================
+
+================================================================================
+Starting test: test_mps_device_properties
+================================================================================
+
+================================================================================
+Starting test: test_mps_device_properties
+================================================================================
+
+================================================================================
+Finished test: test_mps_device_properties
+================================================================================
+
+================================================================================
+Starting test: test_mps_nn_operations
+================================================================================
+
+================================================================================
+Starting test: test_mps_nn_operations
+================================================================================
+
+================================================================================
+Finished test: test_mps_nn_operations
+================================================================================
+
+================================================================================
+Starting test: test_mps_tensor_creation
+================================================================================
+
+================================================================================
+Starting test: test_mps_tensor_creation
+================================================================================
+
+================================================================================
+Finished test: test_mps_tensor_creation
+================================================================================
+
+================================================================================
+Starting test: test_mps_tensor_operations
+================================================================================
+
+================================================================================
+Starting test: test_mps_tensor_operations
+================================================================================
+
+================================================================================
+Finished test: test_mps_tensor_operations
+================================================================================
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_mps_operations.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_operations.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_operations.py', '--update-expected']
+EFF
+======================================================================
+ERROR: test_cpu_nn_operations (__main__.TestCPUOperations.test_cpu_nn_operations)
+Test neural network operations on CPU.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_operations.py", line 104, in test_cpu_nn_operations
+    model = model.to(expected_device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+FAIL: test_cpu_tensor_creation (__main__.TestCPUOperations.test_cpu_tensor_creation)
+Test creating tensors explicitly on CPU.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_operations.py", line 58, in test_cpu_tensor_creation
+    self.assertEqual(cpu_tensor1.device.type, expected_device)
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+======================================================================
+FAIL: test_cpu_tensor_operations (__main__.TestCPUOperations.test_cpu_tensor_operations)
+Test operations on CPU tensors.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_operations.py", line 80, in test_cpu_tensor_operations
+    self.assertEqual(c.device.type, expected_device)
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.034s
+
+FAILED (failures=2, errors=1)
+
+================================================================================
+Starting test: test_cpu_nn_operations
+================================================================================
+TEST INFO - TestCPUOperations.test_cpu_nn_operations: Using device: mps:0
+TEST INFO - TestCPUOperations.test_cpu_nn_operations: Testing CPU neural network operations
+
+================================================================================
+Finished test: test_cpu_nn_operations
+================================================================================
+
+================================================================================
+Starting test: test_cpu_tensor_creation
+================================================================================
+TEST INFO - TestCPUOperations.test_cpu_tensor_creation: Using device: mps:0
+TEST INFO - TestCPUOperations.test_cpu_tensor_creation: Testing CPU tensor creation
+
+================================================================================
+Finished test: test_cpu_tensor_creation
+================================================================================
+
+================================================================================
+Starting test: test_cpu_tensor_operations
+================================================================================
+TEST INFO - TestCPUOperations.test_cpu_tensor_operations: Using device: mps:0
+TEST INFO - TestCPUOperations.test_cpu_tensor_operations: Testing CPU tensor operations
+
+================================================================================
+Finished test: test_cpu_tensor_operations
+================================================================================
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_operations.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_override.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_override.py', '--update-expected']
+FEE
+======================================================================
+ERROR: test_cpu_override_module_to (__main__.TestCPUOverride.test_cpu_override_module_to)
+Test that CPU override works with module.to(), and toggling off restores the previous device.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_override.py", line 118, in test_cpu_override_module_to
+    model = model.to('cpu:-1')
+            ^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+ERROR: test_cpu_override_tensor_to (__main__.TestCPUOverride.test_cpu_override_tensor_to)
+Test that CPU override works with tensor.to(), and toggling off restores the previous device.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_override.py", line 97, in test_cpu_override_tensor_to
+    x = x.to('cpu:-1')
+        ^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 115, in tensor_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+FAIL: test_cpu_override_device_creation (__main__.TestCPUOverride.test_cpu_override_device_creation)
+Test that CPU override works when creating devices, and toggling off restores the previous device.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_override.py", line 67, in test_cpu_override_device_creation
+    self.assertEqual(default_device, 'cpu')
+AssertionError: 'mps' != 'cpu'
+- mps
++ cpu
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.050s
+
+FAILED (failures=1, errors=2)
+
+================================================================================
+Starting test: test_cpu_override_device_creation
+================================================================================
+TEST INFO - TestCPUOverride.test_cpu_override_device_creation: Default device before override: mps
+TEST INFO - TestCPUOverride.test_cpu_override_device_creation: Created device: cpu
+
+================================================================================
+Finished test: test_cpu_override_device_creation
+================================================================================
+
+================================================================================
+Starting test: test_cpu_override_module_to
+================================================================================
+TEST INFO - TestCPUOverride.test_cpu_override_module_to: Created model with parameters on device: cpu
+
+================================================================================
+Finished test: test_cpu_override_module_to
+================================================================================
+
+================================================================================
+Starting test: test_cpu_override_tensor_to
+================================================================================
+TEST INFO - TestCPUOverride.test_cpu_override_tensor_to: Created tensor on default device: cpu
+
+================================================================================
+Finished test: test_cpu_override_tensor_to
+================================================================================
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cpu_override.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py', '--update-expected']
+.EE.EEs.
+======================================================================
+ERROR: test_cuda_stream_operations (__main__.TestCUDAOperations.test_cuda_stream_operations)
+Test CUDA stream operations.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py", line 98, in test_cuda_stream_operations
+    with torch.cuda.stream(stream):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 607, in stream
+    return StreamContext(stream)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 557, in __init__
+    self.idx = _get_device_index(None, True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/_utils.py", line 36, in _get_device_index
+    if isinstance(device, torch.cuda.device):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+
+======================================================================
+ERROR: test_cuda_stream_with_events (__main__.TestCUDAOperations.test_cuda_stream_with_events)
+Test CUDA streams with events.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py", line 176, in test_cuda_stream_with_events
+    with torch.cuda.stream(stream):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 607, in stream
+    return StreamContext(stream)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 557, in __init__
+    self.idx = _get_device_index(None, True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/_utils.py", line 36, in _get_device_index
+    if isinstance(device, torch.cuda.device):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+
+======================================================================
+ERROR: test_multiple_streams (__main__.TestCUDAOperations.test_multiple_streams)
+Test multiple CUDA streams.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py", line 204, in test_multiple_streams
+    with torch.cuda.stream(stream1):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 607, in stream
+    return StreamContext(stream)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 557, in __init__
+    self.idx = _get_device_index(None, True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/_utils.py", line 36, in _get_device_index
+    if isinstance(device, torch.cuda.device):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+
+======================================================================
+ERROR: test_stream_wait_event (__main__.TestCUDAOperations.test_stream_wait_event)
+Test stream waiting for an event.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py", line 234, in test_stream_wait_event
+    with torch.cuda.stream(stream1):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 607, in stream
+    return StreamContext(stream)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 557, in __init__
+    self.idx = _get_device_index(None, True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/_utils.py", line 36, in _get_device_index
+    if isinstance(device, torch.cuda.device):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.083s
+
+FAILED (errors=4, skipped=1)
+
+================================================================================
+Starting test: test_cuda_event_operations
+================================================================================
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Using device: mps:0
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Starting CUDA event operations test
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Created CUDA events with timing enabled
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Recorded start event
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Performed matrix multiplication
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Recorded end event
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Synchronized CUDA
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: Elapsed time: 0.0 ms
+TEST INFO - TestCUDAOperations.test_cuda_event_operations: CUDA event operations test completed successfully
+Updated expected output file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_event_operations_expected.log
+
+================================================================================
+Finished test: test_cuda_event_operations
+================================================================================
+
+================================================================================
+Starting test: test_cuda_stream_operations
+================================================================================
+TEST INFO - TestCUDAOperations.test_cuda_stream_operations: Using device: mps:0
+
+================================================================================
+Finished test: test_cuda_stream_operations
+================================================================================
+
+================================================================================
+Starting test: test_cuda_stream_with_events
+================================================================================
+TEST INFO - TestCUDAOperations.test_cuda_stream_with_events: Using device: mps:0
+
+================================================================================
+Finished test: test_cuda_stream_with_events
+================================================================================
+
+================================================================================
+Starting test: test_matrix_multiplication
+================================================================================
+TEST INFO - TestCUDAOperations.test_matrix_multiplication: Using device: mps:0
+
+================================================================================
+Finished test: test_matrix_multiplication
+================================================================================
+
+================================================================================
+Starting test: test_multiple_streams
+================================================================================
+TEST INFO - TestCUDAOperations.test_multiple_streams: Using device: mps:0
+
+================================================================================
+Finished test: test_multiple_streams
+================================================================================
+
+================================================================================
+Starting test: test_stream_wait_event
+================================================================================
+TEST INFO - TestCUDAOperations.test_stream_wait_event: Using device: mps:0
+
+================================================================================
+Finished test: test_stream_wait_event
+================================================================================
+
+================================================================================
+Starting test: test_stream_wait_stream
+================================================================================
+TEST INFO - TestCUDAOperations.test_stream_wait_stream: Using device: mps:0
+
+================================================================================
+Finished test: test_stream_wait_stream
+================================================================================
+
+================================================================================
+Starting test: test_tensor_operations
+================================================================================
+TEST INFO - TestCUDAOperations.test_tensor_operations: Using device: mps:0
+TEST INFO - TestCUDAOperations.test_tensor_operations: Created random tensor with shape torch.Size([100]) on mps:0
+TEST INFO - TestCUDAOperations.test_tensor_operations: Performed square operation
+TEST INFO - TestCUDAOperations.test_tensor_operations: Verified tensor operations results
+Updated expected output file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_tensor_operations_expected.log
+
+================================================================================
+Finished test: test_tensor_operations
+================================================================================
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_cuda_operations.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_independent_model_trainet.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_independent_model_trainet.py', '--update-expected']
+Device (cuda): mps:0
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_independent_model_trainet.py", line 25, in <module>
+    main()
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_independent_model_trainet.py", line 14, in main
+    trainer.start_training()
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_submodule.py", line 9, in start_training
+    model = torch.nn.Linear(10, 1).to(self.device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 992 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_independent_model_trainet.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_operations.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_operations.py', '--update-expected']
+F.E..
+======================================================================
+ERROR: test_mps_nn_operations (__main__.TestMPSOperations.test_mps_nn_operations)
+Test neural network operations on MPS.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_operations.py", line 100, in test_mps_nn_operations
+    ).to(self.device)
+      ^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+FAIL: test_cpu_to_mps_conversion (__main__.TestMPSOperations.test_cpu_to_mps_conversion)
+Test converting tensors from CPU to MPS.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_operations.py", line 129, in test_cpu_to_mps_conversion
+    self.assertEqual(implicit_tensor.device.type, 'mps')
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.086s
+
+FAILED (failures=1, errors=1)
+
+================================================================================
+Starting test: test_cpu_to_mps_conversion
+================================================================================
+TEST INFO - TestMPSOperations.test_cpu_to_mps_conversion: Using device: mps:0
+TEST INFO - TestMPSOperations.test_cpu_to_mps_conversion: Testing CPU-to-MPS conversion
+
+================================================================================
+Finished test: test_cpu_to_mps_conversion
+================================================================================
+
+================================================================================
+Starting test: test_mps_device_properties
+================================================================================
+TEST INFO - TestMPSOperations.test_mps_device_properties: Using device: mps:0
+TEST INFO - TestMPSOperations.test_mps_device_properties: Testing MPS device properties
+TEST INFO - TestMPSOperations.test_mps_device_properties: MPS device properties tests passed
+Updated expected output file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_device_properties_expected.log
+
+================================================================================
+Finished test: test_mps_device_properties
+================================================================================
+
+================================================================================
+Starting test: test_mps_nn_operations
+================================================================================
+TEST INFO - TestMPSOperations.test_mps_nn_operations: Using device: mps:0
+TEST INFO - TestMPSOperations.test_mps_nn_operations: Testing MPS neural network operations
+
+================================================================================
+Finished test: test_mps_nn_operations
+================================================================================
+
+================================================================================
+Starting test: test_mps_tensor_creation
+================================================================================
+TEST INFO - TestMPSOperations.test_mps_tensor_creation: Using device: mps:0
+TEST INFO - TestMPSOperations.test_mps_tensor_creation: Testing explicit MPS tensor creation
+TEST INFO - TestMPSOperations.test_mps_tensor_creation: Explicit MPS tensor creation tests passed
+Updated expected output file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_tensor_creation_expected.log
+
+================================================================================
+Finished test: test_mps_tensor_creation
+================================================================================
+
+================================================================================
+Starting test: test_mps_tensor_operations
+================================================================================
+TEST INFO - TestMPSOperations.test_mps_tensor_operations: Using device: mps:0
+TEST INFO - TestMPSOperations.test_mps_tensor_operations: Testing MPS tensor operations
+TEST INFO - TestMPSOperations.test_mps_tensor_operations: MPS tensor operations tests passed
+Updated expected output file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_tensor_operations_expected.log
+
+================================================================================
+Finished test: test_mps_tensor_operations
+================================================================================
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_mps_operations.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_submodule.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_submodule.py', '--update-expected']
+INFO:__main__:Test file passed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_submodule.py
+INFO:__main__:Running test file: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py
+INFO:__main__:Running command: ['/Users/unixwzrd/miniconda3/envs/LLaSA-speech/bin/python', '/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py', '--update-expected']
+.E.FF..E..FEFF
+================================================================================
+Starting test: test_class_method_call
+================================================================================
+TEST INFO - TestTorchDevice.test_class_method_call: Using device: mps:0
+
+================================================================================
+Finished test: test_class_method_call
+================================================================================
+
+================================================================================
+Starting test: test_cuda_event_functionality
+================================================================================
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Using device: mps:0
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Testing CUDA event functionality
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Created CUDA event with timing enabled
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Recorded event
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Synchronized CUDA
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Elapsed time between events: 0.0 ms
+TEST INFO - TestTorchDevice.test_cuda_event_functionality: Event recorded status: True
+
+================================================================================
+Finished test: test_cuda_event_functionality
+================================================================================
+
+================================================================================
+Starting test: test_cuda_functions_on_mps
+================================================================================
+TEST INFO - TestTorchDevice.test_cuda_functions_on_mps: Using device: mps:0
+
+================================================================================
+Finished test: test_cuda_functions_on_mps
+================================================================================
+
+================================================================================
+Starting test: test_cuda_stream_functionality
+================================================================================
+TEST INFO - TestTorchDevice.test_cuda_stream_functionality: Using device: mps:0
+
+================================================================================
+Finished test: test_cuda_stream_functionality
+================================================================================
+
+================================================================================
+Starting test: test_device_context_manager
+================================================================================
+TEST INFO - TestTorchDevice.test_device_context_manager: Using device: mps:0
+
+================================================================================
+Finished test: test_device_context_manager
+================================================================================
+
+================================================================================
+Starting test: test_device_instantiation
+================================================================================
+TEST INFO - TestTorchDevice.test_device_instantiation: Using device: mps:0
+TEST INFO - TestTorchDevice.test_device_instantiation: Creating devices with different types
+TEST INFO - TestTorchDevice.test_device_instantiation: Expected device type: mps
+TEST INFO - TestTorchDevice.test_device_instantiation: Device instantiation tests completed successfully
+
+================================================================================
+Finished test: test_device_instantiation
+================================================================================
+
+================================================================================
+Starting test: test_device_name_and_capability
+================================================================================
+TEST INFO - TestTorchDevice.test_device_name_and_capability: Using device: mps:0
+
+================================================================================
+Finished test: test_device_name_and_capability
+================================================================================
+
+================================================================================
+Starting test: test_device_type_inference
+================================================================================
+TEST INFO - TestTorchDevice.test_device_type_inference: Using device: mps:0
+
+================================================================================
+Finished test: test_device_type_inference
+================================================================================
+
+================================================================================
+Starting test: test_device_with_indices
+================================================================================
+TEST INFO - TestTorchDevice.test_device_with_indices: Using device: mps:0
+TEST INFO - TestTorchDevice.test_device_with_indices: Testing device creation with explicit indices
+TEST INFO - TestTorchDevice.test_device_with_indices: Exception during tensor creation: 'mps' != 'cpu'
+- mps
++ cpu
+
+TEST INFO - TestTorchDevice.test_device_with_indices: Device with indices tests completed successfully
+
+================================================================================
+Finished test: test_device_with_indices
+================================================================================
+
+================================================================================
+Starting test: test_empty_cache
+================================================================================
+TEST INFO - TestTorchDevice.test_empty_cache: Using device: mps:0
+
+================================================================================
+Finished test: test_empty_cache
+================================================================================
+
+================================================================================
+Starting test: test_explicit_device_operations
+================================================================================
+TEST INFO - TestTorchDevice.test_explicit_device_operations: Using device: mps:0
+TEST INFO - TestTorchDevice.test_explicit_device_operations: Testing operations with explicitly specified device types
+TEST INFO - TestTorchDevice.test_explicit_device_operations: Testing CPU operations
+
+================================================================================
+Finished test: test_explicit_device_operations
+================================================================================
+
+================================================================================
+Starting test: test_get_arch_list
+================================================================================
+TEST INFO - TestTorchDevice.test_get_arch_list: Using device: mps:0
+
+================================================================================
+Finished test: test_get_arch_list
+================================================================================
+
+================================================================================
+Starting test: test_get_device_properties
+================================================================================
+TEST INFO - TestTorchDevice.test_get_device_properties: Using device: mps:0
+
+================================================================================
+Finished test: test_get_device_properties
+================================================================================
+
+================================================================================
+Starting test: test_is_built
+================================================================================
+TEST INFO - TestTorchDevice.test_is_built: Using device: mps:0
+
+================================================================================
+Finished test: test_is_built
+================================================================================
+
+================================================================================
+Starting test: test_is_initialized
+================================================================================F.EF......FE..EE.
+TEST INFO - TestTorchDevice.test_is_initialized: Using device: mps:0
+
+================================================================================
+Finished test: test_is_initialized
+================================================================================
+
+================================================================================
+Starting test: test_memory_functions
+================================================================================
+TEST INFO - TestTorchDevice.test_memory_functions: Using device: mps:0
+
+================================================================================
+Finished test: test_memory_functions
+================================================================================
+
+================================================================================
+Starting test: test_memory_snapshot
+================================================================================
+TEST INFO - TestTorchDevice.test_memory_snapshot: Using device: mps:0
+
+================================================================================
+Finished test: test_memory_snapshot
+================================================================================
+
+================================================================================
+Starting test: test_memory_stats
+================================================================================
+TEST INFO - TestTorchDevice.test_memory_stats: Using device: mps:0
+
+================================================================================
+Finished test: test_memory_stats
+================================================================================
+
+================================================================================
+Starting test: test_memory_summary
+================================================================================
+TEST INFO - TestTorchDevice.test_memory_summary: Using device: mps:0
+
+================================================================================
+Finished test: test_memory_summary
+================================================================================
+
+================================================================================
+Starting test: test_mock_function_stub
+================================================================================
+TEST INFO - TestTorchDevice.test_mock_function_stub: Using device: mps:0
+
+================================================================================
+Finished test: test_mock_function_stub
+================================================================================
+
+================================================================================
+Starting test: test_module_import_order
+================================================================================
+TEST INFO - TestTorchDevice.test_module_import_order: Using device: mps:0
+
+================================================================================
+Finished test: test_module_import_order
+================================================================================
+
+================================================================================
+Starting test: test_multiple_device_indices
+================================================================================
+TEST INFO - TestTorchDevice.test_multiple_device_indices: Using device: mps:0
+
+================================================================================
+Finished test: test_multiple_device_indices
+================================================================================
+
+================================================================================
+Starting test: test_nested_function_call
+================================================================================
+TEST INFO - TestTorchDevice.test_nested_function_call: Using device: mps:0
+
+================================================================================
+Finished test: test_nested_function_call
+================================================================================
+
+================================================================================
+Starting test: test_static_method_call
+================================================================================
+TEST INFO - TestTorchDevice.test_static_method_call: Using device: mps:0
+
+================================================================================
+Finished test: test_static_method_call
+================================================================================
+
+================================================================================
+Starting test: test_stream_functions
+================================================================================
+TEST INFO - TestTorchDevice.test_stream_functions: Using device: mps:0
+
+================================================================================
+Finished test: test_stream_functions
+================================================================================
+
+================================================================================
+Starting test: test_submodule_call
+================================================================================
+TEST INFO - TestTorchDevice.test_submodule_call: Using device: mps:0
+
+================================================================================
+Finished test: test_submodule_call
+================================================================================
+
+================================================================================
+Starting test: test_synchronize
+================================================================================
+TEST INFO - TestTorchDevice.test_synchronize: Using device: mps:0
+
+================================================================================
+Finished test: test_synchronize
+================================================================================
+
+================================================================================
+Starting test: test_tensor_creation_on_device
+================================================================================
+TEST INFO - TestTorchDevice.test_tensor_creation_on_device: Using device: mps:0
+
+================================================================================
+Finished test: test_tensor_creation_on_device
+================================================================================
+
+================================================================================
+Starting test: test_tensor_device_movement
+================================================================================
+TEST INFO - TestTorchDevice.test_tensor_device_movement: Using device: mps:0
+
+================================================================================
+Finished test: test_tensor_device_movement
+================================================================================
+
+================================================================================
+Starting test: test_tensor_operations
+================================================================================
+TEST INFO - TestTorchDevice.test_tensor_operations: Using device: mps:0
+
+================================================================================
+Finished test: test_tensor_operations
+================================================================================
+
+================================================================================
+Starting test: test_tensor_operations_between_devices
+================================================================================
+TEST INFO - TestTorchDevice.test_tensor_operations_between_devices: Using device: mps:0
+
+================================================================================
+Finished test: test_tensor_operations_between_devices
+================================================================================
+
+================================================================================
+Starting test: test_unsupported_cuda_functions
+================================================================================
+TEST INFO - TestTorchDevice.test_unsupported_cuda_functions: Using device: mps:0F
+======================================================================
+ERROR: test_cuda_event_functionality (__main__.TestTorchDevice.test_cuda_event_functionality)
+Test CUDA event functionality
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 424, in test_cuda_event_functionality
+    with torch.cuda.stream(torch.cuda.Stream()):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 607, in stream
+    return StreamContext(stream)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 557, in __init__
+    self.idx = _get_device_index(None, True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/_utils.py", line 36, in _get_device_index
+    if isinstance(device, torch.cuda.device):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+
+======================================================================
+ERROR: test_device_type_inference (__main__.TestTorchDevice.test_device_type_inference)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 498, in test_device_type_inference
+    tensor = torch.tensor([1, 2, 3]).to(self.device)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 115, in tensor_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+ERROR: test_get_arch_list (__main__.TestTorchDevice.test_get_arch_list)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 479, in test_get_arch_list
+    arch_list = torch.cuda.get_arch_list()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 918, in get_arch_list
+    arch_flags = torch._C._cuda_getArchFlags()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'torch._C' has no attribute '_cuda_getArchFlags'
+
+======================================================================
+ERROR: test_memory_snapshot (__main__.TestTorchDevice.test_memory_snapshot)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 474, in test_memory_snapshot
+    snapshot = torch.cuda.memory_snapshot()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/memory.py", line 501, in memory_snapshot
+    return torch._C._cuda_memorySnapshot()["segments"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'torch._C' has no attribute '_cuda_memorySnapshot'
+
+======================================================================
+ERROR: test_submodule_call (__main__.TestTorchDevice.test_submodule_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 200, in test_submodule_call
+    trainer.start_training()
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_submodule.py", line 9, in start_training
+    model = torch.nn.Linear(10, 1).to(self.device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 134, in module_to_replacement
+    return torch.nn.Module.to(m, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 978 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 131, in module_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+ERROR: test_tensor_device_movement (__main__.TestTorchDevice.test_tensor_device_movement)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 289, in test_tensor_device_movement
+    tensor_device = tensor_cpu.to(self.device)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 115, in tensor_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+ERROR: test_tensor_operations (__main__.TestTorchDevice.test_tensor_operations)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 275, in test_tensor_operations
+    tensor = torch.from_numpy(np_array).to(self.device)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 115, in tensor_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+FAIL: test_cuda_stream_functionality (__main__.TestTorchDevice.test_cuda_stream_functionality)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 369, in test_cuda_stream_functionality
+    self.assertTrue(hasattr(stream, 'query'))
+AssertionError: False is not true
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 394, in test_cuda_stream_functionality
+    self.fail(f"CUDA stream functionality test failed: {e}")
+AssertionError: CUDA stream functionality test failed: False is not true
+
+======================================================================
+FAIL: test_device_context_manager (__main__.TestTorchDevice.test_device_context_manager)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 434, in test_device_context_manager
+    tensor = torch.tensor([1.0, 2.0]).to(self.device.type)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 118, in tensor_to_replacement
+    return torch.Tensor.to(t, *new_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  [Previous line repeated 979 more times]
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 115, in tensor_to_replacement
+    device = torch_device_replacement(args[0])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/TorchDevice/cuda/patch.py", line 42, in torch_device_replacement
+    with _lock:
+RecursionError: maximum recursion depth exceeded while calling a Python object
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 437, in test_device_context_manager
+    self.fail(f"Unexpected exception: {e}")
+AssertionError: Unexpected exception: maximum recursion depth exceeded while calling a Python object
+
+======================================================================
+FAIL: test_explicit_device_operations (__main__.TestTorchDevice.test_explicit_device_operations)
+Test operations with explicitly specified device types
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 61, in test_explicit_device_operations
+    self.assertEqual(cpu_tensor.device.type, expected_redirected_type)
+AssertionError: 'cpu' != 'mps'
+- cpu
++ mps
+
+
+======================================================================
+FAIL: test_get_device_properties (__main__.TestTorchDevice.test_get_device_properties)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 319, in test_get_device_properties
+    props = torch.cuda.get_device_properties(0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 523, in get_device_properties
+    _lazy_init()  # will define _get_device_properties
+    ^^^^^^^^^^^^
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 310, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled
+
+======================================================================
+FAIL: test_is_built (__main__.TestTorchDevice.test_is_built)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 447, in test_is_built
+    self.assertTrue(is_built)
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_is_initialized (__main__.TestTorchDevice.test_is_initialized)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 442, in test_is_initialized
+    self.assertTrue(initialized)
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_memory_stats (__main__.TestTorchDevice.test_memory_stats)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 469, in test_memory_stats
+    self.assertIn('active.all.current', stats)
+AssertionError: 'active.all.current' not found in {'allocated': 192954368, 'reserved': 103079215104, 'free': 48034791424, 'total': 103079215104}
+
+======================================================================
+FAIL: test_stream_functions (__main__.TestTorchDevice.test_stream_functions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 354, in test_stream_functions
+    torch.cuda.stream()
+TypeError: stream() missing 1 required positional argument: 'stream'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 358, in test_stream_functions
+    self.fail(f"Stream functions raised an exception: {e}")
+AssertionError: Stream functions raised an exception: stream() missing 1 required positional argument: 'stream'
+
+======================================================================
+FAIL: test_unsupported_cuda_functions (__main__.TestTorchDevice.test_unsupported_cuda_functions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 309, in test_unsupported_cuda_functions
+    torch.cuda.ipc_collect()
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 966, in ipc_collect
+    _lazy_init()
+  File "/Users/unixwzrd/miniconda3/envs/LLaSA-speech/lib/python3.11/site-packages/torch/cuda/__init__.py", line 310, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py", line 314, in test_unsupported_cuda_functions
+    self.fail(f"torch.cuda.ipc_collect() raised an exception: {e}")
+AssertionError: torch.cuda.ipc_collect() raised an exception: Torch not compiled with CUDA enabled
+
+----------------------------------------------------------------------
+Ran 32 tests in 0.172s
+
+FAILED (failures=9, errors=7)
+
+
+================================================================================
+Finished test: test_unsupported_cuda_functions
+================================================================================
+ERROR:__main__:Test file failed: /Users/mps/projects/AI-PROJECTS/TorchDevice/tests/test_TorchDevice.py
+ERROR:__main__:Some tests failed. Skipping build and install.

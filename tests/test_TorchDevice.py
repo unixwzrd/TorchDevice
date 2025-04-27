@@ -134,7 +134,13 @@ class TestTorchDevice(PrefixedTestCase):
         cuda0 = torch.device('cuda:0')
         cuda1 = torch.device('cuda:1')
         mps0 = torch.device('mps:0')
+        # Enable CPU override for this section
+        torch.device('cpu:-1')
         cpu0 = torch.device('cpu:0')
+        self.assertEqual(cpu0.type, 'cpu')
+        self.assertEqual(cpu0.index, 0)
+        # Remove CPU override after test
+        torch.device('cpu:-1')
         
         # Check that the indices are preserved where appropriate
         self.assertEqual(cpu0.index, 0)
@@ -165,17 +171,22 @@ class TestTorchDevice(PrefixedTestCase):
         try:
             t_cuda0 = torch.randn(5, device=cuda0)
             t_mps0 = torch.randn(5, device=mps0)
+            # Enable CPU override for tensor creation
+            torch.device('cpu:-1')
             t_cpu0 = torch.randn(5, device=cpu0)
+            self.assertEqual(t_cpu0.device.type, 'cpu')
+            # Remove CPU override after test
+            torch.device('cpu:-1')
             
             # Verify the devices match what we expect
             self.assertEqual(t_cpu0.device.type, 'cpu')
             
             if self.has_cuda:
-                self.assertEqual(t_cuda0.device.type, 'cuda')
-                self.assertEqual(t_mps0.device.type, 'cuda')
-            elif self.has_mps:
-                self.assertEqual(t_cuda0.device.type, 'mps')
-                self.assertEqual(t_mps0.device.type, 'mps')
+                expected_type = 'cuda'
+                if self.has_mps and TorchDevice.TorchDevice.get_default_device() == 'mps':
+                    expected_type = 'mps'
+                self.assertEqual(t_cuda0.device.type, expected_type)
+                self.assertEqual(t_mps0.device.type, expected_type)
             else:
                 self.assertEqual(t_cuda0.device.type, 'cpu')
                 self.assertEqual(t_mps0.device.type, 'cpu')

@@ -301,3 +301,5 @@ backup/
 node_modules/
 .project-planning
 .master-planning
+bashexp*.txt
+output.txt
