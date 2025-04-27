@@ -4,7 +4,7 @@ This module patches PyTorch's CUDA functionality to work seamlessly with MPS (an
 upon import. Users should never need to call patch functions directly—patching is automatic.
 """
 
-__version__ = '0.2.0'
+__version__ = '0.1.1'
 
 from .TorchDevice import TorchDevice
 from .modules.TDLogger import auto_log

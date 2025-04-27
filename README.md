@@ -27,6 +27,7 @@ TorchDevice is a Python library that enables transparent code portability betwee
       - [PyTorch Compatibility](#pytorch-compatibility)
       - [Code Quality](#code-quality)
     - [Upcoming Changes](#upcoming-changes)
+  - [Project Status and Next Steps](#project-status-and-next-steps)
   - [Contributing](#contributing)
   - [Supporting the Development of this Project](#supporting-the-development-of-this-project)
   - [License](#license)
@@ -208,6 +209,15 @@ Ensure these scripts are updated to account for any device redirection behavior.
 - **Enhanced Testing:** Additional unit tests for individual components.
 - **Better Documentation:** Expanded examples and detailed API references.
 - **Configurable Logging:** More detailed and configurable log options.
+
+## Project Status and Next Steps
+
+- **Modularization Complete:** All core logic has been modularized into dedicated files (see `TorchDevice/cuda/`).
+- **CPU Override Feature:** The `cpu:-1` syntax is fully supported and documented. See below and the API docs for usage.
+- **All Core Tests Passing:** All unit and integration tests for the modularized codebase are passing as of the latest commit.
+- **Pre-Commit Checklist:** See `.project-planning/pre-commit-checklist.md` for quality, testing, and documentation standards. All items except multi-version/hardware testing and post-commit tasks are complete.
+- **Next Focus:** Running and fixing all example/demo scripts in the `examples/` directory, and expanding user-facing features.
+- **Contributor Guidance:** For ongoing work, see `docs/modularization-plan.md` and `.project-planning/pre-commit-checklist.md` for up-to-date progress and standards.
 
 ## Contributing
 
