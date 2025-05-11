@@ -303,3 +303,5 @@ node_modules/
 .master-planning
 bashexp*.txt
 output.txt
+.vscode
+tmp
