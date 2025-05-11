@@ -115,9 +115,9 @@ class TestMPSOperations(PrefixedTestCase):
         Test converting tensors from CPU to MPS.
 
         Two scenarios are covered:
-         1. An implicit tensor creation call (without device specified) is now forced to be accelerated,
+        1. An implicit tensor creation call (without device specified) is now forced to be accelerated,
             so such a tensor should be created on the accelerator.
-         2. A tensor created explicitly on CPU using the override ("cpu:-1") should remain on CPU,
+        2. A tensor created explicitly on CPU using the override ("cpu:-1") should remain on CPU,
             and then can be converted to MPS.
         """
         self.info("Testing CPU-to-MPS conversion")
@@ -137,9 +137,9 @@ class TestMPSOperations(PrefixedTestCase):
         converted_tensor = cpu_tensor.to(self.device)
         self.assertEqual(converted_tensor.device.type, 'mps')
 
-        # Convert back to CPU and check values.
+        # Convert back to CPU and check values (should redirect to the accelerator device).
         cpu_tensor_again = converted_tensor.cpu()
-        self.assertTrue(torch.allclose(cpu_tensor, cpu_tensor_again))
+        self.assertTrue(torch.allclose(converted_tensor, cpu_tensor_again))
 
         self.info("CPU-to-MPS conversion tests passed")
         diff_check(self.log_capture)

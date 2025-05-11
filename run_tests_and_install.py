@@ -83,6 +83,7 @@ def build_package() -> bool:
         logger.error(f"❌ Package build failed: {process.stderr}")
         return False
 
+
 def install_package() -> bool:
     """Install the TorchDevice package in development mode."""
     logger.info("Installing TorchDevice package...")
@@ -95,6 +96,7 @@ def install_package() -> bool:
     else:
         logger.error(f"❌ Package installation failed: {process.stderr}")
         return False
+
 
 def main():
     parser = argparse.ArgumentParser(description="Run TorchDevice tests, build, and install")
@@ -162,6 +164,7 @@ def main():
     elapsed_time = time.time() - start_time
     logger.info(f"Process completed in {elapsed_time:.2f} seconds")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

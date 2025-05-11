@@ -63,6 +63,7 @@ if hasattr(torch.cuda, 'amp'):
                 super().__init__(*args, **kwargs)
         torch.cuda.amp.GradScaler = GradScalerReplacement
 
+
 # --- TorchDevice Class with Patched CUDA Functions ---
 class TorchDevice:
     _default_device = None
@@ -209,11 +210,13 @@ class TorchDevice:
         if not isinstance(t, torch.Tensor):
             raise TypeError(f"tensor_to_replacement called on non-tensor object: {type(t)}")
         if args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            # Always redirect through the TorchDevice policy
             device = TorchDevice.torch_device_replacement(args[0])
             new_args = (device,) + args[1:]
             kwargs.pop('device', None)
             return TorchDevice._original_tensor_to(t, *new_args, **kwargs)
         elif 'device' in kwargs and isinstance(kwargs['device'], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            # Always redirect through the TorchDevice policy
             device = TorchDevice.torch_device_replacement(kwargs['device'])
             kwargs['device'] = device
             return TorchDevice._original_tensor_to(t, *args, **kwargs)
@@ -225,11 +228,13 @@ class TorchDevice:
         if not isinstance(m, torch.nn.Module):
             raise TypeError(f"module_to_replacement called on non-module object: {type(m)}")
         if args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            # Always redirect through the TorchDevice policy
             device = TorchDevice.torch_device_replacement(args[0])
             new_args = (device,) + args[1:]
             kwargs.pop('device', None)
             return TorchDevice._original_module_to(m, *new_args, **kwargs)
         elif 'device' in kwargs and isinstance(kwargs['device'], (str, _ORIGINAL_TORCH_DEVICE_TYPE)):
+            # Always redirect through the TorchDevice policy
             device = TorchDevice.torch_device_replacement(kwargs['device'])
             kwargs['device'] = device
             return TorchDevice._original_module_to(m, *args, **kwargs)
@@ -378,29 +383,41 @@ class TorchDevice:
             cls._default_device = 'cpu'
 
 
-    @classmethod
+    @staticmethod
     @auto_log()
-    def tensor_cuda_replacement(cls, self, device=None, non_blocking=False, memory_format=torch.preserve_format):
-        default_device = cls.get_default_device()
-        if default_device == 'mps':
-            return self.to('mps', non_blocking=non_blocking, memory_format=memory_format)
-        return cls._original_tensor_cuda(self, device, non_blocking, memory_format)
-
-    @classmethod
-    @auto_log()
-    def module_cuda_replacement(cls, self, device=None):
-        default_device = cls.get_default_device()
-        if default_device == 'mps':
-            return self.to('mps')
-        return cls._original_module_cuda(self, device)
+    def tensor_cuda_replacement(tensor, device=None, non_blocking=False, memory_format=torch.preserve_format):
+        default_device = TorchDevice.get_default_device()
+        return tensor.to(default_device, non_blocking=non_blocking, memory_format=memory_format)
 
     @staticmethod
-    def tensor_mps_replacement(self, device=None, non_blocking=False, memory_format=torch.preserve_format):
-        return self.to('mps', non_blocking=non_blocking, memory_format=memory_format)
+    @auto_log()
+    def module_cuda_replacement(module, device=None):
+        default_device = TorchDevice.get_default_device()
+        return module.to(default_device)
 
     @staticmethod
-    def module_mps_replacement(self, device=None):
-        return self.to('mps')
+    @auto_log()
+    def tensor_mps_replacement(tensor, device=None, non_blocking=False, memory_format=torch.preserve_format):
+        default_device = TorchDevice.get_default_device()
+        return tensor.to(default_device, non_blocking=non_blocking, memory_format=memory_format)
+
+    @staticmethod
+    @auto_log()
+    def module_mps_replacement(module, device=None):
+        default_device = TorchDevice.get_default_device()
+        return module.to(default_device)
+
+    @staticmethod
+    @auto_log()
+    def tensor_cpu_replacement(tensor):
+        default_device = TorchDevice.get_default_device()
+        return tensor.to(default_device)
+
+    @staticmethod
+    @auto_log()
+    def module_cpu_replacement(module):
+        default_device = TorchDevice.get_default_device()
+        return module.to(default_device)
 
     @classmethod
     @auto_log()
@@ -413,6 +430,8 @@ class TorchDevice:
         setattr(torch.nn.Module, 'to', cls.module_to_replacement)  # type: ignore[attr-defined]
         setattr(torch.Tensor, 'mps', cls.tensor_mps_replacement)  # type: ignore[attr-defined]
         setattr(torch.nn.Module, 'mps', cls.module_mps_replacement)  # type: ignore[attr-defined]
+        setattr(torch.Tensor, 'cpu', cls.tensor_cpu_replacement)  # type: ignore[attr-defined]
+        setattr(torch.nn.Module, 'cpu', cls.module_cpu_replacement)  # type: ignore[attr-defined]
         cuda_patch.apply_all_patches()
         torch.load = cls.torch_load_replacement  # type: ignore[assignment]
 
