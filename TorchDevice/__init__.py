@@ -13,5 +13,6 @@ from .cuda import patch
 # Apply all monkey-patches automatically on import
 # Users should never call patch functions directly.
 patch.apply_all_patches()
+TorchDevice.get_default_device()
 
 __all__ = ['TorchDevice', 'auto_log', '__version__']

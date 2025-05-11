@@ -205,9 +205,9 @@ class TestMPSOperations(PrefixedTestCase):
         # Check device type
         self.assertEqual(device.type, self.expected_type)
         
-        # If it's redirected to MPS, check index
+        # If it's redirected to MPS, check index is either None or 0
         if device.type == 'mps':
-            self.assertEqual(device.index, 0)
+            self.assertIn(device.index, [None, 0])
         
         self.logger.info("MPS device properties tests passed")
 

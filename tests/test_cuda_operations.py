@@ -83,7 +83,7 @@ class TestCUDAOperations(PrefixedTestCase):
         
         # Compare results
         self.assertTrue(torch.allclose(c.cpu(), c_cpu, rtol=1e-5, atol=1e-5))
-        self.assertEqual(c.device, self.device)
+        self.assertEqual(c.device.type, self.device.type)
         
     def test_cuda_stream_operations(self):
         """Test CUDA stream operations."""

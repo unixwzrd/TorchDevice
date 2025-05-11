@@ -139,16 +139,49 @@ def _cuda_stream(stream=None):
         @auto_log()
         def __init__(self, stream):
             self.stream = stream
+
         @auto_log()
         def __enter__(self):
             if self.stream is not None and hasattr(self.stream, '__enter__'):
                 self.stream.__enter__()
             return self.stream
+
         @auto_log()
         def __exit__(self, exc_type, exc_val, exc_tb):
             if self.stream is not None and hasattr(self.stream, '__exit__'):
                 return self.stream.__exit__(exc_type, exc_val, exc_tb)
             return False
+        
+        @auto_log()
+        def query(self):
+            if self.stream is not None and hasattr(self.stream, 'query'):
+                return self.stream.query()
+            return True
+            
+        @auto_log()
+        def synchronize(self):
+            if self.stream is not None and hasattr(self.stream, 'synchronize'):
+                return self.stream.synchronize()
+            return self
+            
+        @auto_log()
+        def wait_event(self, event=None):
+            if self.stream is not None and hasattr(self.stream, 'wait_event'):
+                return self.stream.wait_event(event)
+            return self
+            
+        @auto_log()
+        def wait_stream(self, stream=None):
+            if self.stream is not None and hasattr(self.stream, 'wait_stream'):
+                return self.stream.wait_stream(stream)
+            return self
+            
+        @auto_log()
+        def record_event(self, event=None):
+            if self.stream is not None and hasattr(self.stream, 'record_event'):
+                return self.stream.record_event(event)
+            return self
+    
     return StreamContext(stream)
 
 def _cuda_current_stream(device=None):
