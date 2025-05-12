@@ -8,11 +8,23 @@ __version__ = '0.1.1'
 
 from .TorchDevice import TorchDevice
 from .modules.TDLogger import auto_log
-from .cuda import patch
+from .modules import patch
+from .modules import compile
 
 # Apply all monkey-patches automatically on import
 # Users should never call patch functions directly.
 patch.apply_all_patches()
 TorchDevice.get_default_device()
+
+
+# Expose a function to apply deferred patches - these must be run after core patching
+def apply_deferred_patches():
+    """Apply patches that must be run after the core system is initialized."""
+    compile.patch_dynamo_config()
+
+
+# Run deferred patches - but only after import is complete
+# This prevents circular import issues
+from . import _deferred_patches  # noqa
 
 __all__ = ['TorchDevice', 'auto_log', '__version__']

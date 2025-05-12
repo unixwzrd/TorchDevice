@@ -30,7 +30,7 @@ Usage:
 """
 import torch
 from .modules.TDLogger import auto_log, log_info  # We now use only auto_log instead of log_info for debugging
-import TorchDevice.cuda.patch as cuda_patch
+import TorchDevice.modules.patch as cuda_patch
 import threading
 from typing import Optional
 
@@ -292,7 +292,6 @@ class TorchDevice:
                 
             device_type = _CACHED_DEFAULT_DEVICE
             result = cls._original_torch_device(device_type, device_index)
-            log_info(f"Returning device: {result}")
             return result
     
     @classmethod
@@ -386,6 +385,7 @@ class TorchDevice:
     @classmethod
     @auto_log()
     def apply_patches(cls):
+        cls.get_default_device()
         """Apply all patches to PyTorch."""
         if cls._patches_applied:
             return

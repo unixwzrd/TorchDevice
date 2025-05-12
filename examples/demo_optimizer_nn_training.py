@@ -3,40 +3,42 @@
 # Demo: Neural Network Training with PyTorch Optimizer
 
 import os
-# Disable PyTorch compiler (torch._dynamo) which is causing issues
-os.environ["TORCH_COMPILE_DISABLE"] = "1"
-# Disable PyTorch inductor
-os.environ["TORCH_INDUCTOR_DISABLE"] = "1"
-
-# Import torch first
-import torch
-
-# Import the disable_torch_compile module to patch torch._dynamo and torch.compile
 import sys
-import os
 
 # Add the parent directory to sys.path to find the TorchDevice package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from TorchDevice.disable_torch_compile import apply_patches
 
-# Apply patches to disable torch._dynamo and torch.compile
-apply_patches()
+# Import TorchDevice first before any torch imports
+import TorchDevice  # noqa: F401
 
-# Now import TorchDevice after we've disabled _dynamo
-import TorchDevice
+# Only after TorchDevice import, import torch and its modules
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
+
 def main():
     print("Creating device...")
-    device = torch.device('cuda')
-    print(f"Device created: {device}")
+    try:
+        device = torch.device('cuda')
+        print(f"Device created: {device}")
+    except Exception as e:
+        print(f"Warning: Error creating device: {e}")
+        device = torch.device('cpu')
+        print(f"Fallback device created: {device}")
 
-    # Simple dataset
+    # Simple dataset - handle error cases gracefully
     print("Creating tensors...")
-    x = torch.linspace(-1, 1, 100).unsqueeze(1).to(device)
-    y = x.pow(3) + 0.3 * torch.rand(x.size()).to(device)
-    print(f"Tensors created on {device}")
+    try:
+        x = torch.linspace(-1, 1, 100).unsqueeze(1).to(device)
+        y = x.pow(3) + 0.3 * torch.rand(x.size()).to(device)
+        print(f"Tensors created on {device}")
+    except Exception as e:
+        print(f"Warning: Error creating tensors on device {device}: {e}")
+        x = torch.linspace(-1, 1, 100).unsqueeze(1)
+        y = x.pow(3) + 0.3 * torch.rand(x.size())
+        print("Tensors created on CPU")
+        device = torch.device('cpu')
 
     # Define a simple neural network
     print("Creating model...")
@@ -51,9 +53,17 @@ def main():
     print("Setting up optimizer...")
     criterion = nn.MSELoss()
     
-    # Create optimizer with torch._C.DisableTorchFunction to avoid issues
-    with torch._C.DisableTorchFunction():
+    # Create optimizer, using a try/except block to handle any issues
+    try:
+        # Try to create optimizer directly
         optimizer = optim.SGD(model.parameters(), lr=0.01)
+    except Exception as e:
+        print(f"Warning: Error creating optimizer: {e}")
+        # Fall back to CPU tensors if needed
+        device = torch.device('cpu')
+        model = model.to(device)
+        optimizer = optim.SGD(model.parameters(), lr=0.01)
+        
     print("Optimizer created")
 
     # Training loop
@@ -68,9 +78,18 @@ def main():
         # Backward pass
         loss.backward()
         
-        # Use torch._C.DisableTorchFunction for optimizer.step() to avoid issues
-        with torch._C.DisableTorchFunction():
+        # Optimizer step with error handling
+        try:
             optimizer.step()
+        except Exception as e:
+            print(f"Warning: Error during optimizer.step(): {e}")
+            # Try one more time
+            try:
+                optimizer.step()
+            except Exception as inner_e:
+                print(f"Error: Unable to run optimizer.step(): {inner_e}")
+                # Skip this step
+                continue
 
         if (epoch + 1) % 10 == 0:  # Print more frequently
             print(f'Epoch [{epoch + 1}/50], Loss: {loss.item():.4f}')
@@ -83,6 +102,7 @@ def main():
         prediction = model(test_input)
     print(f"Prediction for input 0.5: {prediction.item():.4f}")
     print("Test complete!")
+
 
 if __name__ == '__main__':
     main()

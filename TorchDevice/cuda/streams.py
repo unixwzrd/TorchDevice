@@ -17,6 +17,9 @@ class _cuda_Stream:
         self._is_created = True
         self._is_destroyed = False
 
+        # --- NEW: alias for demo code's stream.cuda_stream access ---
+        self.cuda_stream = self
+
     @auto_log()
     def synchronize(self):
         if hasattr(torch, 'mps') and hasattr(torch.mps, 'synchronize'):
@@ -151,44 +154,51 @@ def _cuda_stream(stream=None):
             if self.stream is not None and hasattr(self.stream, '__exit__'):
                 return self.stream.__exit__(exc_type, exc_val, exc_tb)
             return False
-        
+
         @auto_log()
         def query(self):
             if self.stream is not None and hasattr(self.stream, 'query'):
                 return self.stream.query()
             return True
-            
+
         @auto_log()
         def synchronize(self):
             if self.stream is not None and hasattr(self.stream, 'synchronize'):
                 return self.stream.synchronize()
             return self
-            
+
         @auto_log()
         def wait_event(self, event=None):
             if self.stream is not None and hasattr(self.stream, 'wait_event'):
                 return self.stream.wait_event(event)
             return self
-            
+
         @auto_log()
         def wait_stream(self, stream=None):
             if self.stream is not None and hasattr(self.stream, 'wait_stream'):
                 return self.stream.wait_stream(stream)
             return self
-            
+
         @auto_log()
         def record_event(self, event=None):
             if self.stream is not None and hasattr(self.stream, 'record_event'):
                 return self.stream.record_event(event)
             return self
-    
+
     return StreamContext(stream)
+
+def _cuda_stream_class(device=None, priority=0):
+    # FORWARD 'priority' into the constructor instead of dropping it:
+    return _cuda_Stream(device, priority)
+
 
 def _cuda_current_stream(device=None):
     return _cuda_stream_class(device=device)
 
+
 def _cuda_default_stream(device=None):
     return _cuda_stream_class(device=device)
+
 
 def _cuda_synchronize(device=None):
     if hasattr(torch, 'mps') and hasattr(torch.mps, 'synchronize'):
@@ -198,10 +208,21 @@ def _cuda_synchronize(device=None):
 
 def apply_patches():
     import torch
+
     torch.cuda.Stream = _cuda_stream_class  # type: ignore[assignment]
     torch.cuda.Event = _get_mps_event_class()  # type: ignore[assignment]
     torch.cuda.current_stream = _cuda_current_stream  # type: ignore[assignment]
     torch.cuda.default_stream = _cuda_default_stream  # type: ignore[assignment]
     torch.cuda.synchronize = _cuda_synchronize  # type: ignore[assignment]
     torch.cuda.stream = _cuda_stream  # type: ignore[assignment]
- 
+
+    # Add global Stream class patch if it exists
+    if hasattr(torch, 'Stream'):
+        class StreamWrapper:
+            def __new__(cls, device=None, *args, **kwargs):
+                # Redirect to our stream implementation
+                if isinstance(device, str) and device.startswith('cuda'):
+                    device = TorchDevice.redirect_device_type(device)
+                return _cuda_stream_class(device)
+
+        torch.Stream = StreamWrapper  # type: ignore[assignment]
