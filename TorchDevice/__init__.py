@@ -4,7 +4,7 @@ This module patches PyTorch's CUDA functionality to work seamlessly with MPS (an
 upon import. Users should never need to call patch functions directly—patching is automatic.
 """
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 from .TorchDevice import TorchDevice
 from .modules.TDLogger import auto_log
@@ -13,8 +13,8 @@ from .modules import compile
 
 # Apply all monkey-patches automatically on import
 # Users should never call patch functions directly.
-patch.apply_all_patches()
 TorchDevice.get_default_device()
+patch.apply_all_patches()
 
 
 # Expose a function to apply deferred patches - these must be run after core patching

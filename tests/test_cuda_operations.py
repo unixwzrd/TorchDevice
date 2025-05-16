@@ -4,10 +4,14 @@ import unittest
 from pathlib import Path
 
 import torch
-from common.test_utils import PrefixedTestCase
+from common.test_utils import PrefixedTestCase, set_deterministic_seed
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 
 import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up
+
+
+# Define a fixed seed for reproducible tests
+SEED = 42
 
 
 logging.basicConfig(
@@ -27,6 +31,12 @@ class TestCUDAOperations(PrefixedTestCase):
 
     def setUp(self):
         """Set up logger capture for this test."""
+        # Call parent setUp to set up logging
+        super().setUp()
+        
+        # Explicitly set seeds for deterministic behavior
+        set_deterministic_seed(SEED)
+        
         print("\n" + "=" * 80)
         print(f"Starting test: {self._testMethodName}")
         print("=" * 80)

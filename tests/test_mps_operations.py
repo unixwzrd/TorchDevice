@@ -3,7 +3,6 @@
 Test file for MPS device operations with TorchDevice.
 This ensures that all operations work correctly on MPS.
 """
-import logging
 import unittest
 import torch
 from pathlib import Path
@@ -14,13 +13,6 @@ from common.test_utils import PrefixedTestCase
 
 # Import TorchDevice to ensure CUDA redirection is set up
 import TorchDevice
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 class TestMPSOperations(PrefixedTestCase):

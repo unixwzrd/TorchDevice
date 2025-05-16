@@ -4,9 +4,9 @@ import time
 from ..modules.TDLogger import auto_log, log_info
 from ..TorchDevice import TorchDevice
 
-# --- Stream and Event Replacement Classes/Functions ---
 
-class _cuda_Stream:
+# --- Stream and Event Replacement Classes/Functions ---
+class t_cuda_Stream:
     """Replacement for torch.cuda.Stream (MPS/CPU)."""
     @auto_log()
     def __init__(self, device: Optional[Any] = None, priority: int = 0):
@@ -47,21 +47,21 @@ class _cuda_Stream:
     def record_event(self, event=None):
         return self
 
-# --- Event Replacement ---
 
-def _get_mps_event_class():
+# --- Event Replacement ---
+def t_get_mps_event_class():
     try:
-        from torch._streambase import _EventBase
+        from torch._streambase import t_EventBase
     except (AttributeError, ImportError):
         try:
-            from torch._C import _EventBase
+            from torch._C import t_EventBase
         except (AttributeError, ImportError):
             try:
-                _EventBase = torch._C._EventBase
+                t_EventBase = torch._C._EventBase
             except (AttributeError, ImportError):
-                _EventBase = object
+                t_EventBase = object
 
-    class _cuda_Event(_EventBase):
+    class t_cuda_Event(t_EventBase):
         @auto_log()
         def __init__(self, enable_timing=False, blocking=False, interprocess=False, device=None):
             try:
@@ -122,22 +122,22 @@ def _get_mps_event_class():
             if hasattr(self, '_is_destroyed') and not self._is_destroyed:
                 self._is_destroyed = True
 
-    return _cuda_Event
+    return t_cuda_Event
 
 # --- Stream/Event Factory Functions ---
 
-def _cuda_stream_class(device=None, priority=0):
-    return _cuda_Stream(device)
+def t_cuda_stream_class(device=None, priority=0):
+    return t_cuda_Stream(device)
 
-def _cuda_event(*args, **kwargs):
+def t_cuda_event(*args, **kwargs):
     enable_timing = kwargs.get('enable_timing', False)
     blocking = kwargs.get('blocking', False)
     interprocess = kwargs.get('interprocess', False)
     device = kwargs.get('device', None)
-    _Event = _get_mps_event_class()
-    return _Event(enable_timing=enable_timing, blocking=blocking, interprocess=interprocess, device=device)
+    t_Event = t_get_mps_event_class()
+    return t_Event(enable_timing=enable_timing, blocking=blocking, interprocess=interprocess, device=device)
 
-def _cuda_stream(stream=None):
+def t_cuda_stream(stream=None):
     class StreamContext:
         @auto_log()
         def __init__(self, stream):
@@ -187,20 +187,20 @@ def _cuda_stream(stream=None):
 
     return StreamContext(stream)
 
-def _cuda_stream_class(device=None, priority=0):
+def t_cuda_stream_class(device=None, priority=0):
     # FORWARD 'priority' into the constructor instead of dropping it:
-    return _cuda_Stream(device, priority)
+    return t_cuda_Stream(device, priority)
 
 
-def _cuda_current_stream(device=None):
-    return _cuda_stream_class(device=device)
+def t_cuda_current_stream(device=None):
+    return t_cuda_stream_class(device=device)
 
 
-def _cuda_default_stream(device=None):
-    return _cuda_stream_class(device=device)
+def t_cuda_default_stream(device=None):
+    return t_cuda_stream_class(device=device)
 
 
-def _cuda_synchronize(device=None):
+def t_cuda_synchronize(device=None):
     if hasattr(torch, 'mps') and hasattr(torch.mps, 'synchronize'):
         torch.mps.synchronize()
 
@@ -209,20 +209,20 @@ def _cuda_synchronize(device=None):
 def apply_patches():
     import torch
 
-    torch.cuda.Stream = _cuda_stream_class  # type: ignore[assignment]
-    torch.cuda.Event = _get_mps_event_class()  # type: ignore[assignment]
-    torch.cuda.current_stream = _cuda_current_stream  # type: ignore[assignment]
-    torch.cuda.default_stream = _cuda_default_stream  # type: ignore[assignment]
-    torch.cuda.synchronize = _cuda_synchronize  # type: ignore[assignment]
-    torch.cuda.stream = _cuda_stream  # type: ignore[assignment]
+    torch.cuda.Stream = t_cuda_stream_class  # type: ignore[assignment]
+    torch.cuda.Event = t_get_mps_event_class()  # type: ignore[assignment]
+    torch.cuda.current_stream = t_cuda_current_stream  # type: ignore[assignment]
+    torch.cuda.default_stream = t_cuda_default_stream  # type: ignore[assignment]
+    torch.cuda.synchronize = t_cuda_synchronize  # type: ignore[assignment]
+    torch.cuda.stream = t_cuda_stream  # type: ignore[assignment]
 
     # Add global Stream class patch if it exists
     if hasattr(torch, 'Stream'):
         class StreamWrapper:
             def __new__(cls, device=None, *args, **kwargs):
                 # Redirect to our stream implementation
-                if isinstance(device, str) and device.startswith('cuda'):
-                    device = TorchDevice.redirect_device_type(device)
-                return _cuda_stream_class(device)
+                if device is not None:
+                    device = TorchDevice.torch_device_replacement(device)
+                return t_cuda_stream_class(device)
 
         torch.Stream = StreamWrapper  # type: ignore[assignment]

@@ -1,50 +1,79 @@
 #!/usr/bin/env python
 
-# Demo: Basic Tensor Operations with TorchDevice
+"""
+Demo for basic tensor operations with TorchDevice.
 
-import os
-# Disable PyTorch compiler (torch._dynamo) which is causing issues
-os.environ["TORCH_COMPILE_DISABLE"] = "1"
-
-import TorchDevice
+This script demonstrates how basic tensor operations are handled 
+by TorchDevice with seamless device redirection.
+"""
+# Import TorchDevice first to ensure it patches PyTorch
+import TorchDevice  # noqa: F401
 import torch
+from example_utils import set_deterministic_seed
+
+# Disable PyTorch compiler (torch._dynamo) which is causing issues
+import os
+os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
 def main():
     print("\n=== Testing TorchDevice Basic Tensor Operations ===\n")
     
-    # Create a device using CUDA syntax (will be redirected if on MPS)
-    print("Creating device...")
-    device = torch.device('cuda')
-    print(f"Device created: {device}")
+    # Set deterministic seed for reproducible results
+    set_deterministic_seed()
     
-    # Create tensors on the device
+    # Device automatically redirects to the best available hardware
+    device = torch.device('cuda')
+    print(f"Using device: {device}")
+    
+    # Create tensors with random values
     print("\nCreating tensors on device...")
     a = torch.randn(3, 3).to(device)
     b = torch.randn(3, 3).to(device)
-    print(f"Tensor a: {a}")
-    print(f"Tensor b: {b}")
+    print(f"Tensor a on {a.device}:")
+    print(a)
+    print(f"Tensor b on {b.device}:")
+    print(b)
     
-    # Perform basic operations
+    # Basic arithmetic operations
     print("\nPerforming basic operations...")
     c = a + b
-    print(f"Addition (a + b): {c}")
+    print("\nAddition (a + b):")
+    print(c)
     
-    d = a @ b  # Matrix multiplication
-    print(f"Matrix multiplication (a @ b): {d}")
+    d = a * b
+    print("\nElement-wise multiplication (a * b):")
+    print(d)
     
-    e = torch.sin(a)
-    print(f"Sine function (sin(a)): {e}")
+    e = torch.matmul(a, b)
+    print("\nMatrix multiplication (torch.matmul(a, b)):")
+    print(e)
+    
+    # Other common operations
+    f = torch.sin(a)
+    print("\nSine of a (torch.sin(a)):")
+    print(f)
+    
+    g = torch.exp(b)
+    print("\nExponential of b (torch.exp(b)):")
+    print(g)
+    
+    h = torch.max(a, b)
+    print("\nElement-wise maximum (torch.max(a, b)):")
+    print(h)
+    
+    # Change device if needed
+    cpu_tensor = a.cpu()
+    print(f"\nTensor moved to CPU: {cpu_tensor.device}")
+    
+    # Move back to accelerator
+    accelerated_tensor = cpu_tensor.to(device)
+    print(f"Tensor moved back to accelerator: {accelerated_tensor.device}")
     
     # Test device properties
-    print("\nDevice properties:")
-    if hasattr(torch.cuda, 'get_device_name'):
-        print(f"Device name: {torch.cuda.get_device_name(0)}")
-    
-    if hasattr(torch.cuda, 'memory_allocated'):
-        print(f"Memory allocated: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
-    
-    if hasattr(torch.cuda, 'memory_reserved'):
-        print(f"Memory reserved: {torch.cuda.memory_reserved() / 1024 / 1024:.2f} MB")
+    print("\nTesting device properties...")
+    print(f"Device name: {torch.cuda.get_device_name(device)}")
+    print(f"Device memory allocated: {torch.cuda.memory_allocated(device)}")
+    print(f"Device memory reserved: {torch.cuda.memory_reserved(device)}")
     
     print("\n=== Test Complete ===")
 

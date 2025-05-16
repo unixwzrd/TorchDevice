@@ -58,7 +58,7 @@ def _device_aware_compile(model: Any, *args: Any, **kwargs: Any) -> Any:
         kwargs['backend'] = 'aot_eager'
     
     # Call the original compile function with our adjusted arguments
-    original_compile = getattr(_device_aware_compile, '_original_compile', None)
+    original_compile = getattr(_device_aware_compile, 't_compile', None)
     if original_compile:
         try:
             return original_compile(model, *args, **kwargs)
@@ -82,7 +82,7 @@ def patch_compile() -> None:
     # Save the original compile function
     if hasattr(torch, "compile"):
         _original = torch.compile
-        _device_aware_compile._original_compile = _original  # type: ignore
+        _device_aware_compile.t_compile = _original  # type: ignore
         
         # Replace the compile function
         torch.compile = _device_aware_compile  # type: ignore

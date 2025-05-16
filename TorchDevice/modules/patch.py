@@ -18,7 +18,7 @@ def apply_all_patches() -> None:
             pass
 
     # 1) core patches—these must come first
-    from ..cuda import device, memory, random, streams, unassigned
+    from ..device import device, memory, random, streams, unassigned
     device.apply_patches()
     memory.apply_patches()
     random.apply_patches()

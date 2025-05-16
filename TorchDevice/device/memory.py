@@ -17,22 +17,27 @@ def _memory_allocated(device: Optional[int] = None) -> int:
     proc = psutil.Process(os.getpid())
     return proc.memory_info().rss
 
+
 @auto_log()
 def _memory_reserved(device: Optional[int] = None) -> int:
     return psutil.virtual_memory().total
+
 
 @auto_log()
 def _max_memory_allocated(device: Optional[int] = None) -> int:
     return _memory_allocated(device)
 
+
 @auto_log()
 def _max_memory_reserved(device: Optional[int] = None) -> int:
     return _memory_reserved(device)
+
 
 @auto_log()
 def _mem_get_info(device: Optional[int] = None) -> Tuple[int, int]:
     vm = psutil.virtual_memory()
     return vm.available, vm.total
+
 
 @auto_log()
 def _memory_stats(device: Optional[int] = None) -> Dict[str, Any]:
@@ -50,6 +55,7 @@ def _memory_stats(device: Optional[int] = None) -> Dict[str, Any]:
     }
     return stats
 
+
 @auto_log()
 def _memory_snapshot(device: Optional[int] = None):
     return [{
@@ -61,6 +67,7 @@ def _memory_snapshot(device: Optional[int] = None):
         'segment_type': 'small_pool',
     }]
 
+
 @auto_log()
 def _memory_summary(device: Optional[int] = None, abbreviated: bool = False) -> str:
     stats = _memory_stats(device)
@@ -69,21 +76,26 @@ def _memory_summary(device: Optional[int] = None, abbreviated: bool = False) -> 
             f"Memory Free: {stats['free']} bytes\n"
             f"Memory Total: {stats['total']} bytes\n")
 
+
 @auto_log()
 def _reset_peak_memory_stats(device: Optional[int] = None) -> None:
     pass
+
 
 @auto_log()
 def _reset_accumulated_memory_stats(device: Optional[int] = None) -> None:
     pass
 
+
 @auto_log()
 def _reset_max_memory_allocated(device: Optional[int] = None) -> None:
     pass
 
+
 @auto_log()
 def _reset_max_memory_reserved(device: Optional[int] = None) -> None:
     pass
+
 
 @auto_log()
 def _empty_cache(device: Optional[int] = None):
@@ -91,62 +103,85 @@ def _empty_cache(device: Optional[int] = None):
     if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
         torch.mps.empty_cache()
 
-@auto_log()
-def mock_cuda_reset_peak_memory_stats(cls, device=None):
-    pass
 
 @auto_log()
-def mock_cuda_reset_accumulated_memory_stats(cls, device=None):
-    pass
+def t_cuda_reset_peak_memory_stats(device: Optional[int] = None) -> None:
+    return _reset_peak_memory_stats(device)
+
 
 @auto_log()
-def mock_cuda_reset_max_memory_allocated(cls, device=None):
-    pass
+def t_cuda_reset_accumulated_memory_stats(device: Optional[int] = None) -> None:
+    return _reset_accumulated_memory_stats(device)
+
 
 @auto_log()
-def mock_cuda_reset_max_memory_reserved(cls, device=None):
-    pass
+def t_cuda_reset_max_memory_allocated(device: Optional[int] = None) -> None:
+    return _reset_max_memory_allocated(device)
+
+
+@auto_log()
+def t_cuda_reset_max_memory_reserved(device: Optional[int] = None) -> None:
+    return _reset_max_memory_reserved(device)
 
 # --- Public API functions (patched onto torch.cuda) ---
-def memory_allocated(device: Optional[int] = None) -> int:
+
+@auto_log()
+def t_cuda_memory_allocated(device: Optional[int] = None) -> int:
     return _memory_allocated(device)
-def memory_reserved(device: Optional[int] = None) -> int:
+
+
+@auto_log()
+def t_cuda_memory_reserved(device: Optional[int] = None) -> int:
     return _memory_reserved(device)
-def max_memory_allocated(device: Optional[int] = None) -> int:
+
+
+@auto_log()
+def t_cuda_max_memory_allocated(device: Optional[int] = None) -> int:
     return _max_memory_allocated(device)
-def max_memory_reserved(device: Optional[int] = None) -> int:
+
+
+@auto_log()
+def t_cuda_max_memory_reserved(device: Optional[int] = None) -> int:
     return _max_memory_reserved(device)
-def mem_get_info(device: Optional[int] = None) -> Tuple[int, int]:
+
+
+@auto_log()
+def t_cuda_mem_get_info(device: Optional[int] = None) -> Tuple[int, int]:
     return _mem_get_info(device)
-def memory_stats(device: Optional[int] = None) -> Dict[str, Any]:
+
+
+@auto_log()
+def t_cuda_memory_stats(device: Optional[int] = None) -> Dict[str, Any]:
     return _memory_stats(device)
-def memory_snapshot(device: Optional[int] = None):
+
+
+@auto_log()
+def t_cuda_memory_snapshot(device: Optional[int] = None):
     return _memory_snapshot(device)
-def memory_summary(device: Optional[int] = None, abbreviated: bool = False) -> str:
+
+
+@auto_log()
+def t_cuda_memory_summary(device: Optional[int] = None, abbreviated: bool = False) -> str:
     return _memory_summary(device, abbreviated)
-def reset_peak_memory_stats(device: Optional[int] = None) -> None:
-    return _reset_peak_memory_stats(device)
-def reset_accumulated_memory_stats(device: Optional[int] = None) -> None:
-    return _reset_accumulated_memory_stats(device)
-def reset_max_memory_allocated(device: Optional[int] = None) -> None:
-    return _reset_max_memory_allocated(device)
-def reset_max_memory_reserved(device: Optional[int] = None) -> None:
-    return _reset_max_memory_reserved(device)
-def empty_cache(device: Optional[int] = None):
+
+
+@auto_log()
+def t_cuda_empty_cache(device: Optional[int] = None):
     return _empty_cache(device)
+
 
 def apply_patches() -> None:
     import torch
-    torch.cuda.memory_allocated = memory_allocated
-    torch.cuda.memory_reserved = memory_reserved
-    torch.cuda.max_memory_allocated = max_memory_allocated
-    torch.cuda.max_memory_reserved = max_memory_reserved
-    torch.cuda.mem_get_info = mem_get_info
-    torch.cuda.memory_stats = memory_stats
-    torch.cuda.memory_summary = memory_summary
-    torch.cuda.memory_snapshot = memory_snapshot
-    torch.cuda.empty_cache = empty_cache
-    torch.cuda.reset_peak_memory_stats = reset_peak_memory_stats
-    torch.cuda.reset_accumulated_memory_stats = reset_accumulated_memory_stats
-    torch.cuda.reset_max_memory_allocated = reset_max_memory_allocated
-    torch.cuda.reset_max_memory_reserved = reset_max_memory_reserved 
+    torch.cuda.memory_allocated = t_cuda_memory_allocated
+    torch.cuda.memory_reserved = t_cuda_memory_reserved
+    torch.cuda.max_memory_allocated = t_cuda_max_memory_allocated
+    torch.cuda.max_memory_reserved = t_cuda_max_memory_reserved
+    torch.cuda.mem_get_info = t_cuda_mem_get_info
+    torch.cuda.memory_stats = t_cuda_memory_stats
+    torch.cuda.memory_summary = t_cuda_memory_summary
+    torch.cuda.memory_snapshot = t_cuda_memory_snapshot
+    torch.cuda.empty_cache = t_cuda_empty_cache
+    torch.cuda.reset_peak_memory_stats = t_cuda_reset_peak_memory_stats
+    torch.cuda.reset_accumulated_memory_stats = t_cuda_reset_accumulated_memory_stats
+    torch.cuda.reset_max_memory_allocated = t_cuda_reset_max_memory_allocated
+    torch.cuda.reset_max_memory_reserved = t_cuda_reset_max_memory_reserved 
