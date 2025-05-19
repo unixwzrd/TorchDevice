@@ -11,6 +11,11 @@ STDLIB_DIR = os.path.abspath(sysconfig.get_paths()["stdlib"])
 # Use environment variable to toggle
 DUMP_STACK_FRAMES = os.environ.get("DUMP_STACK_FRAMES", "False").lower() == "true"
 
+# Add environment variable to control auto_log verbosity
+LOG_LEVEL = os.environ.get("TORCHDEVICE_LOG_LEVEL", "INFO").upper()
+LOG_LEVELS = {"CRITICAL": 50, "ERROR": 40, "WARNING": 30, "INFO": 20, "DEBUG": 10, "NOTSET": 0}
+#LOG_LEVEL = "WARNING"
+
 # Number of stack frames to display in debug mode.
 STACK_FRAMES = 30
 
@@ -46,7 +51,8 @@ def auto_log():
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             result = None
-            if func.__name__ not in _INTERNAL_LOG_SKIP:
+            # Only log if log level is INFO or lower
+            if LOG_LEVELS.get(LOG_LEVEL, 20) <= 20 and func.__name__ not in _INTERNAL_LOG_SKIP:
                 log_message(f"Called {func.__name__}", "calling the entry now")
                 result = func(*args, **kwargs)
                 log_message(f"{func.__name__} returned {result}", func.__name__)
@@ -142,7 +148,7 @@ def log_message(message: str, torch_function: str = "unknown", stacklevel: int =
                 break
         dump = "\n".join(dump_lines)
         log_info(f"Stack frame dump:\n{dump}")
-        log_info(f"\n**** END OF STACKFRAME DUMP ****\n\n")
+        log_info("\n**** END OF STACKFRAME DUMP ****\n\n")
 
 
 def log_info(message: str) -> None:

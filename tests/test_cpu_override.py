@@ -86,7 +86,7 @@ class TestCPUOverride(PrefixedTestCase):
         torch.device('cpu:-1')
         model_cpu = model.to('cpu')
         for param in model_cpu.parameters():
-            self.assertEqual(param.device.type, 'cpu')
+                self.assertEqual(param.device.type, 'cpu')
         # Toggle override OFF
         torch.device('cpu:-1')
         # Now .to('cpu') should redirect to accelerator if available
@@ -116,7 +116,7 @@ class TestCPUOverride(PrefixedTestCase):
         y_cpu = torch.randn(2, 2, device='cuda')
         self.assertEqual(y_cpu.device.type, 'cpu')
 
-        # Toggle OFF
+            # Toggle OFF
         torch.device('cpu:-1')
         x_accel2 = x.to('cuda')
         self.assertEqual(x_accel2.device.type, expected_type)

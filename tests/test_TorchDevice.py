@@ -215,7 +215,7 @@ class TestTorchDevice(PrefixedTestCase):
 
         # Since the device in start_training() should match the expected device
         # We can also capture the printed output if needed
-        # But for this test, we are focusing on ensuring no exceptions occur
+            # But for this test, we are focusing on ensuring no exceptions occur
 
     def test_nested_function_call(self):
         try:

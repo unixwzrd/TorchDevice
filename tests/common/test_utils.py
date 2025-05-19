@@ -132,7 +132,7 @@ class PrefixedTestCase(unittest.TestCase):
         """
         if args:
             msg = msg % args
-        print(f"TEST ERROR - {self.__class__.__name__}.{self._testMethodName}: {msg}", **kwargs)
+        print(f"TEST ERROR - {self.__class__.__name__}.{self._testMethodName}: {msg}", **kwargs) 
 
 def devices_equivalent(a, b):
     """

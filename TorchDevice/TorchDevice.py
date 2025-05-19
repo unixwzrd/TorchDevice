@@ -30,13 +30,11 @@ Usage:
 """
 import torch
 from .modules.TDLogger import auto_log, log_info  # We now use only auto_log instead of log_info for debugging
-import TorchDevice.modules.patch as patch
 import threading
 from typing import Optional
 
 # Capture the original torch.device type.
-_ORIGINAL_TORCH_DEVICE = torch.device
-T_DEVICE_TYPE = _ORIGINAL_TORCH_DEVICE("cpu").__class__
+T_DEVICE_TYPE = torch.device("cpu").__class__
 
 
 # --- AMP Hooks ---
@@ -63,15 +61,6 @@ if hasattr(torch.cuda, 'amp'):
         torch.cuda.amp.GradScaler = t_cuda_amp_GradScalerReplacement
 
 
-class TorchDeviceMeta(type):
-    def __call__(cls, *args, **kwargs):
-        return TorchDevice.torch_device_replacement(*args, **kwargs)
-    def __instancecheck__(cls, instance):
-        return isinstance(instance, T_DEVICE_TYPE)
-
-class TorchDeviceType(metaclass=TorchDeviceMeta):
-    pass
-
 # --- TorchDevice Class with Patched CUDA Functions ---
 class TorchDevice:
     _default_device = None              # Actual torch.device type
@@ -81,6 +70,7 @@ class TorchDevice:
     _cpu_override = False               # Flag for explicit CPU override
     _in_torch_load = False
     _patches_applied = False
+    _torchdevice_device_patch = None    # Store our patch for idempotency
 
     t_Tensor_to = torch.Tensor.to
     t_nn_Module_to = torch.nn.Module.to
@@ -100,7 +90,7 @@ class TorchDevice:
     t_cuda_is_initialized = torch.cuda.is_initialized
     t_cuda_set_device = torch.cuda.set_device
     t_cuda_synchronize = torch.cuda.synchronize
-    t_device = _ORIGINAL_TORCH_DEVICE
+    t_device = torch.device
     t_load = torch.load
 
 
@@ -118,23 +108,6 @@ class TorchDevice:
     @auto_log()
     def __str__(self):
         return str(self.device)
-
-    class TorchDeviceWrapper(object):
-        @auto_log()
-        def __init__(self, device):
-            self._device = device
-
-        def __getattr__(self, name):
-            return getattr(self._device, name)
-
-        def __repr__(self):
-            return repr(self._device)
-
-        def __str__(self):
-            return str(self._device)
-
-        def __instancecheck__(self, instance):
-            return isinstance(instance, T_DEVICE_TYPE)
 
     @classmethod
     @auto_log()
@@ -171,12 +144,10 @@ class TorchDevice:
             # If device is not specified, inject the current device (default or override)
             if device_arg is None:
                 device = cls.torch_device_replacement()
-                log_info(f"[tensor_creation_wrapper] Injecting device: {device}")
                 kwargs['device'] = device
             else:
                 # Always pass through torch_det to handle override logic
                 device = cls.torch_device_replacement(device_arg)
-                log_info(f"[tensor_creation_wrapper] Normalized device: {device}")
                 kwargs['device'] = device
             return original_func(*args, **kwargs)
         return wrapped_func
@@ -224,10 +195,9 @@ class TorchDevice:
         """
         device_type = ""
         device_index = None
-        log_info(f"Called with args={args}, kwargs={kwargs}")
         with cls._lock:
             # If first argument is torch.device, check for override
-            if args and isinstance(args[0],T_DEVICE_TYPE):
+            if args and isinstance(args[0], T_DEVICE_TYPE):
                 return args[0]
 
             # If first argument is string device spec, parse and modify
@@ -252,38 +222,25 @@ class TorchDevice:
                             cls._cpu_override = False
                             cls._default_device_type = cls._previous_default_device_type
                             cls._previous_default_device_type = ""
-                            log_info("CPU override toggled OFF")
                         else:
                             # Toggle ON
                             cls._cpu_override = True
                             cls._previous_default_device_type = cls._default_device_type
                             cls._default_device_type = 'cpu'
-                            log_info("CPU override toggled ON")
 
             device_type = cls._default_device_type
             result = cls.t_device(device_type, device_index)
             return result
 
     @classmethod
-    @auto_log()
     def torch_load_replacement(cls, *args, **kwargs):
         if cls._in_torch_load:
             return cls.t_load(*args, **kwargs)
         cls._in_torch_load = True
         try:
-            default_device = cls.get_default_device()
-            default_device_str = str(default_device)
-            if 'map_location' in kwargs:
-                ml = kwargs['map_location']
-                # Only override if map_location is a string or torch.device and not the default device
-                if (
-                    (isinstance(ml, str) and ml != default_device_str)
-                    or (isinstance(ml, torch.device) and ml != default_device)
-                ):
-                    kwargs['map_location'] = default_device
-                # If it's a function or dict, leave as is
-            else:
-                kwargs['map_location'] = default_device
+            log_info(f"torch.load called with args: {args}, kwargs: {kwargs}")
+            # Always pass a string for map_location to avoid isinstance errors
+            kwargs['map_location'] = str(cls._default_device)
             return cls.t_load(*args, **kwargs)
         finally:
             cls._in_torch_load = False
@@ -292,25 +249,25 @@ class TorchDevice:
     @staticmethod
     @auto_log()
     def tensor_cuda_replacement(tensor, device=None, non_blocking=False, memory_format=torch.preserve_format):
-        default_device = TorchDevice.get_default_device()
+        default_device = TorchDevice._default_device
         return tensor.to(default_device, non_blocking=non_blocking, memory_format=memory_format)
 
     @staticmethod
     @auto_log()
     def module_cuda_replacement(module, device=None):
-        default_device = TorchDevice.get_default_device()
+        default_device = TorchDevice._default_device
         return module.to(default_device)
 
     @staticmethod
     @auto_log()
     def tensor_mps_replacement(tensor, device=None, non_blocking=False, memory_format=torch.preserve_format):
-        default_device = TorchDevice.get_default_device()
+        default_device = TorchDevice._default_device
         return tensor.to(default_device, non_blocking=non_blocking, memory_format=memory_format)
 
     @staticmethod
     @auto_log()
     def module_mps_replacement(module, device=None):
-        default_device = TorchDevice.get_default_device()
+        default_device = TorchDevice._default_device
         return module.to(default_device)
 
     @staticmethod
@@ -320,17 +277,13 @@ class TorchDevice:
         Replacement for torch.Tensor.cpu() that follows device redirection policy.
         If CPU override is active, moves to CPU, otherwise redirects to default device.
         """
-        # If CPU override is active, actually use CPU
-        if TorchDevice.cpu_override():
-            return TorchDevice.t_Tensor_to(tensor, 'cpu')
-        # Otherwise redirect to default device as per policy
-        default_device = TorchDevice.get_default_device()
+        default_device = TorchDevice._default_device
         return tensor.to(default_device)
 
     @staticmethod
     @auto_log()
     def module_cpu_replacement(module):
-        default_device = TorchDevice.get_default_device()
+        default_device = TorchDevice._default_device
         return module.to(default_device)
 
     @staticmethod
@@ -351,39 +304,59 @@ class TorchDevice:
     @classmethod
     @auto_log()
     def apply_patches(cls):
-        """Apply all patches to PyTorch."""
-        if cls._patches_applied:
+        log_info("[TorchDevice] TorchDevice.apply_patches called")
+        # If already patched, but torch.device is not our patch, re-patch
+        if getattr(cls, '_patches_applied', False):
+            if torch.device is not cls.torch_device_replacement:
+                torch.device = cls.torch_device_replacement
             return
 
-        # --- Original Method Storage ---
-        # Store references to original methods before patching
+        # --- Device redirect override logic ---
+        # import os
+        # allow_redirects = os.environ.get("TORCH_ALLOW_REDIRECTS", "false").lower() == "true"
+        # if not allow_redirects:
+        #     import sys
+        #     if sys.platform == "darwin":
+        #         log_info("TorchDevice: Device redirection is disabled on MacOS by default. Set TORCH_ALLOW_REDIRECTS=true to enable.")
+        #         cls._patches_applied = True
+        #         return
+        # TODO: Re-implement TORCH_ALLOW_REDIRECTS for secure code execution from tensor files only.
+
+        # --- Patch torch.device and related symbols ---
         cls.t_tensor_to = torch.Tensor.to
         cls.t_module_to = torch.nn.Module.to
         cls.t_Tensor_cuda = torch.Tensor.cuda
         cls.t_nn_Module_cuda = torch.nn.Module.cuda
-        cls.t_device = _ORIGINAL_TORCH_DEVICE
+        cls.t_device = torch.device
         cls.t_load = torch.load
         if not hasattr(cls, 't_Tensor_numpy'):
             cls.t_Tensor_numpy = torch.Tensor.numpy  # Store original numpy method
 
-        # --- Patch PyTorch Methods ---
-        # Patch torch.device with a class, not an instance
-        torch.device = TorchDeviceType
+        torch.device = cls.torch_device_replacement
+        setattr(torch.Tensor, 'to', cls.tensor_to_replacement)
+        setattr(torch.nn.Module, 'to', cls.module_to_replacement)
+        setattr(torch.Tensor, 'cuda', cls.tensor_cuda_replacement)
+        setattr(torch.nn.Module, 'cuda', cls.module_cuda_replacement)
+        setattr(torch.Tensor, 'mps', cls.tensor_mps_replacement)
+        setattr(torch.nn.Module, 'mps', cls.module_mps_replacement)
+        setattr(torch.Tensor, 'cpu', cls.tensor_cpu_replacement)
+        setattr(torch.nn.Module, 'cpu', cls.module_cpu_replacement)
+        setattr(torch.Tensor, 'numpy', cls.numpy_replacement)
 
-        # Patch other methods using our existing replacements
-        setattr(torch.Tensor, 'to', cls.tensor_to_replacement)  # type: ignore
-        setattr(torch.nn.Module, 'to', cls.module_to_replacement)  # type: ignore
-        setattr(torch.Tensor, 'cuda', cls.tensor_cuda_replacement)  # type: ignore
-        setattr(torch.nn.Module, 'cuda', cls.module_cuda_replacement)  # type: ignore
-        setattr(torch.Tensor, 'mps', cls.tensor_mps_replacement)  # type: ignore
-        setattr(torch.nn.Module, 'mps', cls.module_mps_replacement)  # type: ignore
-        setattr(torch.Tensor, 'cpu', cls.tensor_cpu_replacement)  # type: ignore
-        setattr(torch.nn.Module, 'cpu', cls.module_cpu_replacement)  # type: ignore
-        setattr(torch.Tensor, 'numpy', cls.numpy_replacement)  # type: ignore
+        # --- Patch other CUDA/MPS/CPU functions via patch.apply_all_patches() ---
+        log_info("[TorchDevice] TorchDevice.apply_patches: calling patch.apply_all_patches()")
+        from . import patch
         patch.apply_all_patches()
-        torch.load = cls.torch_load_replacement  # type: ignore
+        torch.load = cls.torch_load_replacement
 
+        cls._torchdevice_device_patch = cls.torch_device_replacement
         cls._patches_applied = True
+
+    @classmethod
+    def ensure_patched(cls):
+        """Ensure that torch.device is patched with TorchDevice's replacement."""
+        if torch.device is not cls.torch_device_replacement:
+            cls.apply_patches()
 
 
 # Apply patches when the module is imported

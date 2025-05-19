@@ -94,7 +94,7 @@ except ImportError:
 
 ### Best Practices
 
-1. Always import TorchDevice first to ensure general patches are applied
+1. Always import TorchDevice, order does not matter, may be imported before or after PyTorch.
 2. Implement application-specific patches in the application code, not in TorchDevice
 3. Always load models on CPU first, then move to the appropriate device
 4. Use TorchDevice's device detection to determine the best available device

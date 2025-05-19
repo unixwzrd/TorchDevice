@@ -16,7 +16,7 @@ from typing import Any
 from .TDLogger import log_info
 
 
-def _device_aware_compile(model: Any, *args: Any, **kwargs: Any) -> Any:
+def t_device_aware_compile(model: Any, *args: Any, **kwargs: Any) -> Any:
     """
     A device-aware wrapper for torch.compile that selects appropriate backends.
     
@@ -58,7 +58,7 @@ def _device_aware_compile(model: Any, *args: Any, **kwargs: Any) -> Any:
         kwargs['backend'] = 'aot_eager'
     
     # Call the original compile function with our adjusted arguments
-    original_compile = getattr(_device_aware_compile, 't_compile', None)
+    original_compile = getattr(t_device_aware_compile, 't_compile', None)
     if original_compile:
         try:
             return original_compile(model, *args, **kwargs)
@@ -82,10 +82,10 @@ def patch_compile() -> None:
     # Save the original compile function
     if hasattr(torch, "compile"):
         _original = torch.compile
-        _device_aware_compile.t_compile = _original  # type: ignore
+        t_device_aware_compile.t_compile = _original  # type: ignore
         
         # Replace the compile function
-        torch.compile = _device_aware_compile  # type: ignore
+        torch.compile = t_device_aware_compile  # type: ignore
         log_info("Patched torch.compile with device-aware version")
 
 

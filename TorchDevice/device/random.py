@@ -7,15 +7,15 @@ This includes patching for torch and torch.cuda, and device-aware tensor creatio
 
 import torch
 from typing import Callable, Any, List, Optional
-from ..modules.TDLogger import auto_log, log_info
+from ..modules.TDLogger import auto_log
 from ..TorchDevice import TorchDevice
 
 # Store original functions before patching - these should only be used internally
-_manual_seed = torch.manual_seed
-_seed = torch.seed
-_get_rng_state = torch.get_rng_state
-_set_rng_state = torch.set_rng_state
-_initial_seed = torch.initial_seed if hasattr(torch, "initial_seed") else None
+t_manual_seed = torch.manual_seed
+t_seed = torch.seed
+t_get_rng_state = torch.get_rng_state
+t_set_rng_state = torch.set_rng_state
+t_initial_seed = torch.initial_seed if hasattr(torch, "initial_seed") else None
 
 def tensor_creation_wrapper(original_func: Callable) -> Callable:
     """
@@ -25,19 +25,13 @@ def tensor_creation_wrapper(original_func: Callable) -> Callable:
     @auto_log()
     def wrapped_func(*args, **kwargs):
         device_arg = kwargs.get('device', None)
-        # If device is not specified, inject the current device (default or override)
         if device_arg is None:
             device = TorchDevice.torch_device_replacement()
-            log_info(f"[tensor_creation_wrapper] Injecting device: {device}")
             kwargs['device'] = device
         else:
-            # Always pass through torch_device_replacement to handle override logic
             device = TorchDevice.torch_device_replacement(device_arg)
-            log_info(f"[tensor_creation_wrapper] Normalized device: {device}")
             kwargs['device'] = device
-        result = original_func(*args, **kwargs)
-        log_info(f"[tensor_creation_wrapper] Result: {result}")
-        return result
+        return original_func(*args, **kwargs)
     return wrapped_func
 
 # Store patch status to avoid infinite recursion
@@ -49,12 +43,12 @@ def manual_seed(seed: int) -> None:
     
     # Use original function directly when called internally
     if _patched:
-        _manual_seed(seed)
+        t_manual_seed(seed)
         if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
             torch.mps.manual_seed(seed)
     else:
         # This call comes from user code, prevent recursion
-        _manual_seed(seed)
+        t_manual_seed(seed)
         if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
             torch.mps.manual_seed(seed)
 
@@ -64,7 +58,7 @@ def manual_seed_all(seed: int) -> None:
 
 def seed() -> int:
     """Set a random seed for PyTorch and MPS if available, and return it."""
-    s = _seed()
+    s = t_seed()
     if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
         torch.mps.manual_seed(s)
     return s
@@ -75,26 +69,26 @@ def seed_all() -> int:
 
 def get_rng_state(device: Optional[Any] = None) -> torch.Tensor:
     """Get RNG state for the current device (MPS or CPU)."""
-    return _get_rng_state()
+    return t_get_rng_state()
 
 def set_rng_state(state: torch.Tensor, device: Optional[Any] = None) -> None:
     """Set RNG state for the current device (MPS or CPU)."""
-    _set_rng_state(state)
+    t_set_rng_state(state)
 
 def get_rng_state_all() -> List[torch.Tensor]:
     """Get RNG state for all devices (only one device in MPS/CPU)."""
-    return [_get_rng_state()]
+    return [t_get_rng_state()]
 
 def set_rng_state_all(states: List[torch.Tensor]) -> None:
     """Set RNG state for all devices (only one device in MPS/CPU)."""
     if states:
-        _set_rng_state(states[0])
+        t_set_rng_state(states[0])
 
 def initial_seed() -> int:
     """Return the initial seed for PyTorch."""
-    if _initial_seed:
-        return _initial_seed()
-    return _seed()
+    if t_initial_seed:
+        return t_initial_seed()
+    return t_seed()
 
 def apply_patches() -> None:
     """Apply all tensor creation and RNG-related patches."""
@@ -105,29 +99,61 @@ def apply_patches() -> None:
         
     # Patch tensor creation functions
     tensor_creation_functions = [
-        'tensor', 'zeros', 'ones', 'empty', 'randn', 'rand', 'randint', 'arange', 'linspace', 'logspace'
+        'tensor', 'zeros', 'ones', 'empty', 'full',
+        'arange', 'linspace', 'logspace', 'as_tensor',
+        'empty_like', 'zeros_like', 'ones_like', 'full_like',
+        'rand', 'randn', 'randint', 'rand_like', 'randn_like', 'randint_like'
     ]
     for func_name in tensor_creation_functions:
         if hasattr(torch, func_name):
             original_func = getattr(torch, func_name)
-            setattr(torch, func_name, tensor_creation_wrapper(original_func))
-            
+            patched_func = tensor_creation_wrapper(original_func)
+            setattr(torch, func_name, patched_func)
+    
     # Patch RNG/seed logic for torch and torch.cuda
     # Set flag before patching to avoid recursion
     _patched = True
     
-    torch.manual_seed = manual_seed
-    torch.seed = seed
-    torch.get_rng_state = get_rng_state
-    torch.set_rng_state = set_rng_state
+    torch.manual_seed = t_manual_seed
+    torch.seed = t_seed
+    torch.get_rng_state = t_get_rng_state
+    torch.set_rng_state = t_set_rng_state
     
     if hasattr(torch, "cuda"):
-        torch.cuda.manual_seed = manual_seed
-        torch.cuda.manual_seed_all = manual_seed_all
-        torch.cuda.seed = seed
-        torch.cuda.seed_all = seed_all
-        torch.cuda.get_rng_state = get_rng_state
-        torch.cuda.set_rng_state = set_rng_state
-        torch.cuda.get_rng_state_all = get_rng_state_all
-        torch.cuda.set_rng_state_all = set_rng_state_all
-        torch.cuda.initial_seed = initial_seed 
+        # Wrap functions to match expected types
+        # Type-annotated wrappers to fix lint errors
+        def cuda_manual_seed(seed: int) -> None:
+            return t_manual_seed(seed)
+        torch.cuda.manual_seed = cuda_manual_seed
+
+        def cuda_manual_seed_all(seed: int) -> None:
+            return manual_seed_all(seed)
+        torch.cuda.manual_seed_all = cuda_manual_seed_all
+
+        def cuda_seed() -> None:
+            t_seed()
+        torch.cuda.seed = cuda_seed
+
+        def cuda_seed_all() -> None:
+            seed_all()
+        torch.cuda.seed_all = cuda_seed_all
+
+        def cuda_get_rng_state() -> torch.Tensor:
+            return t_get_rng_state()
+        torch.cuda.get_rng_state = cuda_get_rng_state
+
+        def cuda_set_rng_state(state: torch.Tensor) -> None:
+            t_set_rng_state(state)
+        torch.cuda.set_rng_state = cuda_set_rng_state
+
+        def cuda_get_rng_state_all() -> List[torch.Tensor]:
+            return get_rng_state_all()
+        torch.cuda.get_rng_state_all = cuda_get_rng_state_all
+
+        def cuda_set_rng_state_all(states: List[torch.Tensor]) -> None:
+            set_rng_state_all(states)
+        torch.cuda.set_rng_state_all = cuda_set_rng_state_all
+
+        def cuda_initial_seed() -> int:
+            return initial_seed()
+        torch.cuda.initial_seed = cuda_initial_seed

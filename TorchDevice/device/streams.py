@@ -1,7 +1,7 @@
 import torch
 from typing import Any, Optional
 import time
-from ..modules.TDLogger import auto_log, log_info
+from ..modules.TDLogger import auto_log
 from ..TorchDevice import TorchDevice
 
 
@@ -34,7 +34,6 @@ class t_cuda_Stream:
     def wait_event(self, event=None):
         if event is not None:
             event_device = getattr(event, '_device', getattr(event, 'device', None))
-            log_info(f"[DEBUG] Stream.wait_event: self.device={self.device}, event.device={event_device}")
             if event_device is not None and event_device != self.device:
                 raise RuntimeError(f"Stream and event device mismatch: {self.device} vs {event_device}")
         return self
@@ -84,7 +83,6 @@ def t_get_mps_event_class():
         def record(self, stream=None):
             if stream is not None:
                 stream_device = getattr(stream, 'device', None)
-                log_info(f"[DEBUG] Event.record: self._device={self._device}, stream.device={stream_device}")
                 if stream_device is not None and self._device != stream_device:
                     raise RuntimeError(f"Event and stream device mismatch: {self._device} vs {stream_device}")
                 self._stream = stream
@@ -127,7 +125,9 @@ def t_get_mps_event_class():
 # --- Stream/Event Factory Functions ---
 
 def t_cuda_stream_class(device=None, priority=0):
-    return t_cuda_Stream(device)
+    # Always redirect device through TorchDevice logic
+    device = TorchDevice.torch_device_replacement(device)
+    return t_cuda_Stream(device, priority)
 
 def t_cuda_event(*args, **kwargs):
     enable_timing = kwargs.get('enable_timing', False)
@@ -186,11 +186,6 @@ def t_cuda_stream(stream=None):
             return self
 
     return StreamContext(stream)
-
-def t_cuda_stream_class(device=None, priority=0):
-    # FORWARD 'priority' into the constructor instead of dropping it:
-    return t_cuda_Stream(device, priority)
-
 
 def t_cuda_current_stream(device=None):
     return t_cuda_stream_class(device=device)
