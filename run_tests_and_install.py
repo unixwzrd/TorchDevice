@@ -60,6 +60,7 @@ def run_test_file(test_file: Path, update_expected: bool) -> bool:
         cmd.append("--update-expected")
     
     logger.info(f"Running test file: {test_file}")
+    logger.info(f"Running command: {cmd}")
     result = subprocess.run(cmd, env=env)
     if result.returncode != 0:
         logger.error(f"Test file failed: {test_file}")
@@ -82,6 +83,7 @@ def build_package() -> bool:
         logger.error(f"❌ Package build failed: {process.stderr}")
         return False
 
+
 def install_package() -> bool:
     """Install the TorchDevice package in development mode."""
     logger.info("Installing TorchDevice package...")
@@ -94,6 +96,7 @@ def install_package() -> bool:
     else:
         logger.error(f"❌ Package installation failed: {process.stderr}")
         return False
+
 
 def main():
     parser = argparse.ArgumentParser(description="Run TorchDevice tests, build, and install")
@@ -130,9 +133,18 @@ def main():
 
     # Run tests.
     all_passed = True
+    test_results = []
     for test_file in test_files:
-        if not run_test_file(test_file, args.update_expected):
+        passed = run_test_file(test_file, args.update_expected)
+        test_results.append((str(test_file), passed))
+        if not passed:
             all_passed = False
+
+    # Print a summary of test results
+    print("\nTest Results Summary:")
+    for test_file, passed in test_results:
+        status = "PASSED" if passed else "FAILED"
+        print(f"  {test_file}: {status}")
 
     # If tests passed and we're not in test-only mode, build and install.
     if all_passed and not args.test_only:
@@ -152,6 +164,7 @@ def main():
     elapsed_time = time.time() - start_time
     logger.info(f"Process completed in {elapsed_time:.2f} seconds")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

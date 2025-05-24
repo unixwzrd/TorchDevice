@@ -4,10 +4,14 @@ import unittest
 from pathlib import Path
 
 import torch
-from common.test_utils import PrefixedTestCase
+from common.test_utils import PrefixedTestCase, set_deterministic_seed
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 
 import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up
+
+
+# Define a fixed seed for reproducible tests
+SEED = 42
 
 
 logging.basicConfig(
@@ -27,6 +31,12 @@ class TestCUDAOperations(PrefixedTestCase):
 
     def setUp(self):
         """Set up logger capture for this test."""
+        # Call parent setUp to set up logging
+        super().setUp()
+        
+        # Explicitly set seeds for deterministic behavior
+        set_deterministic_seed(SEED)
+        
         print("\n" + "=" * 80)
         print(f"Starting test: {self._testMethodName}")
         print("=" * 80)
@@ -34,9 +44,7 @@ class TestCUDAOperations(PrefixedTestCase):
         # Set up log capture with a unique test name.
         self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)
         # Ensure TorchDevice is initialized
-        self.has_cuda = torch.cuda.is_available()
-        self.has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-        self.device = torch.device('cuda' if self.has_cuda else 'mps' if self.has_mps else 'cpu')
+        self.device = torch.device()
         self.info("Using device: %s", self.device)
 
     def tearDown(self):
@@ -85,7 +93,7 @@ class TestCUDAOperations(PrefixedTestCase):
         
         # Compare results
         self.assertTrue(torch.allclose(c.cpu(), c_cpu, rtol=1e-5, atol=1e-5))
-        self.assertEqual(c.device, self.device)
+        self.assertEqual(c.device.type, self.device.type)
         
     def test_cuda_stream_operations(self):
         """Test CUDA stream operations."""

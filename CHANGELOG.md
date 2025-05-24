@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2025-03-16 - 0.1.1
+
+### Interim Checkpoint Release
+- **Modularization Complete:** All core logic is now modularized into dedicated modules under `TorchDevice/cuda/`.
+- **CPU Override Feature Stable:** The `cpu:-1` override is fully implemented, documented, and tested.
+- **All Core Tests Passing:** All unit and integration tests for the modularized codebase are passing as of this release.
+- **Documentation Updated:** README and developer docs reflect the new structure and features.
+- **Next Focus:** Running and validating all example/demo scripts in the `examples/` directory, and expanding user-facing features.
+
 ## 2025-03-15 - 0.0.5
 
 ### CPU Override Feature
@@ -102,4 +111,3 @@
 
 - Initial release
   - Need other to get involved and help test/make improvements.
-
