@@ -60,6 +60,7 @@ def run_test_file(test_file: Path, update_expected: bool) -> bool:
         cmd.append("--update-expected")
     
     logger.info(f"Running test file: {test_file}")
+    logger.info(f"Running command: {cmd}")
     result = subprocess.run(cmd, env=env)
     if result.returncode != 0:
         logger.error(f"Test file failed: {test_file}")
@@ -130,9 +131,18 @@ def main():
 
     # Run tests.
     all_passed = True
+    test_results = []
     for test_file in test_files:
-        if not run_test_file(test_file, args.update_expected):
+        passed = run_test_file(test_file, args.update_expected)
+        test_results.append((str(test_file), passed))
+        if not passed:
             all_passed = False
+
+    # Print a summary of test results
+    print("\nTest Results Summary:")
+    for test_file, passed in test_results:
+        status = "PASSED" if passed else "FAILED"
+        print(f"  {test_file}: {status}")
 
     # If tests passed and we're not in test-only mode, build and install.
     if all_passed and not args.test_only:

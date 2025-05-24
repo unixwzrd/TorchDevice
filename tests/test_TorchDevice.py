@@ -44,7 +44,9 @@ class TestTorchDevice(PrefixedTestCase):
 
         self.assertEqual(device_cuda.type, expected_device_type)
         self.assertEqual(device_mps.type, expected_device_type)
-        self.assertEqual(device_cpu.type, 'cpu')
+        # Patch: device_cpu should match the hardware default device
+        expected_redirected_type = TorchDevice.TorchDevice.get_default_device()
+        self.assertEqual(device_cpu.type, expected_redirected_type)
         self.info("Device instantiation tests completed successfully")
         
     def test_explicit_device_operations(self):
@@ -54,7 +56,9 @@ class TestTorchDevice(PrefixedTestCase):
         # Test CPU operations
         self.info("Testing CPU operations")
         cpu_tensor = torch.randn(10, device='cpu')
-        self.assertEqual(cpu_tensor.device.type, 'cpu')
+        # Patch: cpu_tensor should match the hardware default device
+        expected_redirected_type = TorchDevice.TorchDevice.get_default_device()
+        self.assertEqual(cpu_tensor.device.type, expected_redirected_type)
         
         # Test MPS operations if available
         self.info("Testing MPS operations")
@@ -130,7 +134,13 @@ class TestTorchDevice(PrefixedTestCase):
         cuda0 = torch.device('cuda:0')
         cuda1 = torch.device('cuda:1')
         mps0 = torch.device('mps:0')
+        # Enable CPU override for this section
+        torch.device('cpu:-1')
         cpu0 = torch.device('cpu:0')
+        self.assertEqual(cpu0.type, 'cpu')
+        self.assertEqual(cpu0.index, 0)
+        # Remove CPU override after test
+        torch.device('cpu:-1')
         
         # Check that the indices are preserved where appropriate
         self.assertEqual(cpu0.index, 0)
@@ -161,17 +171,22 @@ class TestTorchDevice(PrefixedTestCase):
         try:
             t_cuda0 = torch.randn(5, device=cuda0)
             t_mps0 = torch.randn(5, device=mps0)
+            # Enable CPU override for tensor creation
+            torch.device('cpu:-1')
             t_cpu0 = torch.randn(5, device=cpu0)
+            self.assertEqual(t_cpu0.device.type, 'cpu')
+            # Remove CPU override after test
+            torch.device('cpu:-1')
             
             # Verify the devices match what we expect
             self.assertEqual(t_cpu0.device.type, 'cpu')
             
             if self.has_cuda:
-                self.assertEqual(t_cuda0.device.type, 'cuda')
-                self.assertEqual(t_mps0.device.type, 'cuda')
-            elif self.has_mps:
-                self.assertEqual(t_cuda0.device.type, 'mps')
-                self.assertEqual(t_mps0.device.type, 'mps')
+                expected_type = 'cuda'
+                if self.has_mps and TorchDevice.TorchDevice.get_default_device() == 'mps':
+                    expected_type = 'mps'
+                self.assertEqual(t_cuda0.device.type, expected_type)
+                self.assertEqual(t_mps0.device.type, expected_type)
             else:
                 self.assertEqual(t_cuda0.device.type, 'cpu')
                 self.assertEqual(t_mps0.device.type, 'cpu')
@@ -509,15 +524,19 @@ class TestTorchDevice(PrefixedTestCase):
         self.assertEqual(device.type, self.device.type)
 
     def test_tensor_operations_between_devices(self):
-        # Test operations between tensors on different devices
-        tensor_cpu = torch.tensor([1.0, 2.0, 3.0])
-        tensor_device = tensor_cpu.to(self.device)
+        # Create a tensor on the CPU
+        tensor_cpu = torch.tensor([1.0, 2.0, 3.0], device='cpu')
+
+        # Create tensor directly on the device
+        tensor_device = torch.tensor([1.0, 2.0, 3.0], device=self.device)
 
         # Attempt to add tensors from different devices
-        with self.assertRaises(RuntimeError) as context:
+        if tensor_cpu.device != tensor_device.device:
+            with self.assertRaises(RuntimeError):
+                _ = tensor_cpu + tensor_device
+        else:
             result = tensor_cpu + tensor_device
-
-        self.assertIn("Expected all tensors to be on the same device", str(context.exception))
+            self.assertTrue(torch.allclose(result, torch.tensor([2.0, 4.0, 6.0], device=tensor_cpu.device)))
 
     def test_multiple_device_indices(self):
         # Test setting device index

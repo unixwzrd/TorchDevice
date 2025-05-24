@@ -298,3 +298,8 @@ test_projects/cuda-pytorch-template
 test_projects/
 backup/
 *.bak*
+node_modules/
+.project-planning
+.master-planning
+bashexp*.txt
+output.txt

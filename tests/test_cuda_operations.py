@@ -34,9 +34,7 @@ class TestCUDAOperations(PrefixedTestCase):
         # Set up log capture with a unique test name.
         self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)
         # Ensure TorchDevice is initialized
-        self.has_cuda = torch.cuda.is_available()
-        self.has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-        self.device = torch.device('cuda' if self.has_cuda else 'mps' if self.has_mps else 'cpu')
+        self.device = torch.device()
         self.info("Using device: %s", self.device)
 
     def tearDown(self):
