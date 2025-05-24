@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Demo script for TorchDevice stream and event functionality.
+Demo for CUDA Streams and Events with TorchDevice
 
-This script demonstrates how TorchDevice handles CUDA streams and events,
-allowing them to work transparently on MPS devices.
+This script demonstrates how CUDA streams and events can be used with TorchDevice
+to perform asynchronous operations. This is especially useful for overlapping
+computation with data transfers, or for parallelizing independent operations.
 """
 
 import os
 import time
 import TorchDevice  # Import TorchDevice first to apply patches
 import torch
+from example_utils import set_deterministic_seed
+
+# Set seed for reproducible results
+set_deterministic_seed()
 
 def print_separator(title):
     """Print a separator with a title."""

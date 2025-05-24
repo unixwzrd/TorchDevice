@@ -93,3 +93,20 @@ For functions which are not directly supported by the TorchDevice module, the or
 | CUDA-only features | No | Stub or raise NotImplementedError |
 
 NOTE: WIll need to find  a graceful method of handling CUDA only functions on MPS.
+
+## Environment Variable Override: TORCH_ALLOW_REDIRECTS
+
+TorchDevice supports an environment variable override to control device redirection behavior for maximum compatibility and migration flexibility.
+
+- If the environment variable `TORCH_ALLOW_REDIRECTS` is set to `true` (case-insensitive), device redirection is always enabled, regardless of platform (including macOS).
+- If not set or set to any value other than `true`, the default platform-specific behavior applies (e.g., redirection may be disabled on macOS).
+- This override is intended for advanced users, testing, or when running CUDA code on unsupported hardware and you want TorchDevice to transparently redirect to the best available device.
+
+**Example usage:**
+
+```bash
+export TORCH_ALLOW_REDIRECTS=true
+python your_script.py
+```
+
+When this variable is set, TorchDevice will always attempt to redirect device requests according to its policy, even on platforms where this would normally be disabled.

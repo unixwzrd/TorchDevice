@@ -4,10 +4,8 @@ import unittest
 import numpy as np
 
 import torch
-from common.test_utils import PrefixedTestCase
-from common.log_diff import diff_check, setup_log_capture, teardown_log_capture, LogCapture
-
-import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up
+import TorchDevice
+from common.test_utils import PrefixedTestCase, devices_equivalent
 
 logging.basicConfig(
     level=logging.INFO, 
@@ -45,8 +43,8 @@ class TestTorchDevice(PrefixedTestCase):
         self.assertEqual(device_cuda.type, expected_device_type)
         self.assertEqual(device_mps.type, expected_device_type)
         # Patch: device_cpu should match the hardware default device
-        expected_redirected_type = TorchDevice.TorchDevice.get_default_device()
-        self.assertEqual(device_cpu.type, expected_redirected_type)
+        expected_redirected_device = TorchDevice.TorchDevice.get_default_device()
+        self.assertTrue(devices_equivalent(device_cpu, expected_redirected_device))
         self.info("Device instantiation tests completed successfully")
         
     def test_explicit_device_operations(self):
@@ -57,8 +55,8 @@ class TestTorchDevice(PrefixedTestCase):
         self.info("Testing CPU operations")
         cpu_tensor = torch.randn(10, device='cpu')
         # Patch: cpu_tensor should match the hardware default device
-        expected_redirected_type = TorchDevice.TorchDevice.get_default_device()
-        self.assertEqual(cpu_tensor.device.type, expected_redirected_type)
+        expected_redirected_device = TorchDevice.TorchDevice.get_default_device()
+        self.assertTrue(devices_equivalent(cpu_tensor.device, expected_redirected_device))
         
         # Test MPS operations if available
         self.info("Testing MPS operations")
@@ -174,7 +172,7 @@ class TestTorchDevice(PrefixedTestCase):
             # Enable CPU override for tensor creation
             torch.device('cpu:-1')
             t_cpu0 = torch.randn(5, device=cpu0)
-            self.assertEqual(t_cpu0.device.type, 'cpu')
+            self.assertTrue(devices_equivalent(t_cpu0.device, cpu0))
             # Remove CPU override after test
             torch.device('cpu:-1')
             

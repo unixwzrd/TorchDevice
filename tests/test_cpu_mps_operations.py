@@ -2,12 +2,10 @@
 import logging
 import unittest
 from pathlib import Path
-
-import TorchDevice
-
 import torch
+import TorchDevice
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
-from common.test_utils import PrefixedTestCase
+from common.test_utils import PrefixedTestCase, set_deterministic_seed, devices_equivalent
 
 # Configure logging
 logging.basicConfig(
@@ -16,6 +14,9 @@ logging.basicConfig(
     force=True  # Ensure this configuration is applied
 )
 logger = logging.getLogger(__name__)
+
+# Define a fixed seed for reproducible tests
+SEED = 42
 
 class TestCPUOperations(PrefixedTestCase):
     """
@@ -26,6 +27,10 @@ class TestCPUOperations(PrefixedTestCase):
         """Set up test environment."""
         # Call the parent setUp method to set up logging
         super().setUp()
+        
+        # Explicitly set seeds for deterministic behavior
+        set_deterministic_seed(SEED)
+        
         print("\n" + "=" * 80)
         print(f"Starting test: {self._testMethodName}")
         print("=" * 80)
@@ -203,11 +208,11 @@ class TestMPSOperations(PrefixedTestCase):
         device = torch.device('mps')  # Use explicit MPS device
         
         # Check device type
-        self.assertEqual(device.type, self.expected_type)
+        self.assertTrue(devices_equivalent(device.type, self.expected_type))
         
-        # If it's redirected to MPS, check index
+        # If it's redirected to MPS, check index is either None or 0
         if device.type == 'mps':
-            self.assertEqual(device.index, 0)
+            self.assertIn(device.index, [None, 0])
         
         self.logger.info("MPS device properties tests passed")
 

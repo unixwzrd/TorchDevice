@@ -2,9 +2,12 @@
 
 # Demo 1: Basic Tensor Computation
 
+# TorchDevice needs to be imported first to patch torch functions
+# even if not directly used in the code
 import TorchDevice
 import torch
 import numpy as np
+
 
 def main():
     # Select the default device
@@ -25,6 +28,7 @@ def main():
     result_np = result.cpu().numpy()
 
     print(f"Result: {result_np}")
+
 
 if __name__ == '__main__':
     main()
