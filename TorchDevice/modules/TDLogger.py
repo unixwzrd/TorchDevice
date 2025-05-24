@@ -55,7 +55,8 @@ def auto_log():
             if LOG_LEVELS.get(LOG_LEVEL, 20) <= 20 and func.__name__ not in _INTERNAL_LOG_SKIP:
                 log_message(f"Called {func.__name__}", "calling the entry now")
                 result = func(*args, **kwargs)
-                log_message(f"{func.__name__} returned {result}", func.__name__)
+                # log_message(f"{func.__name__} returned {result}", func.__name__)
+                log_message(f"{func.__name__} returned", func.__name__)
             else:
                 result = func(*args, **kwargs)
             return result
@@ -163,3 +164,15 @@ def log_info(message: str) -> None:
         "program_name": os.path.basename(sys.argv[0]) if sys.argv and sys.argv[0] else "unknown",
     }
     _info_logger.info(message, extra=extra)
+
+def log_warning(message: str) -> None:
+    """
+    Simple logging function for warnings.
+    This is the preferred way to log warning messages.
+    Args:
+        message: The message to log
+    """
+    extra = {
+        "program_name": os.path.basename(sys.argv[0]) if sys.argv and sys.argv[0] else "unknown",
+    }
+    _info_logger.warning(message, extra=extra)

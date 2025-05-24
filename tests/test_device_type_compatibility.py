@@ -83,6 +83,18 @@ class DeviceTypeCompatibilityTest(PrefixedTestCase):
     def test_with_default_param_check(self):
         self.assertTrue(self.param_default_check())
 
+    def test_isinstance_with_torch_device_type(self):
+        """Test that isinstance(device, torch.device) works after patching (matches real-world usage)."""
+        d = torch.device('cpu')
+        self.assertTrue(isinstance(d, torch.device), "torch.device is not a type after patching!")
+        self.assertFalse(isinstance('cpu', torch.device), "isinstance('cpu', torch.device) should be False")
+
+    def test_torch_device_type_exact(self):
+        """Test that the type of the object returned by torch.device is exactly torch.device."""
+        d = torch.device('cpu')
+        self.assertIs(type(d), type(torch.device('cpu')))
+        self.assertEqual(type(d).__name__, 'device')
+
 
 if __name__ == '__main__':
     # Enable to run just this test

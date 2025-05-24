@@ -310,3 +310,7 @@ utils
 test_projects/*
 test_projects/custom-tts/samples/cpu_output.wav
 custom-tts/
+torchdevice_tts_final_patch.txt
+torchdevice_tts_pr_patch.txt
+torchdevice_tts_patch.txt
+*.wav
