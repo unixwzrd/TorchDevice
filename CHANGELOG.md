@@ -1,5 +1,57 @@
 # CHANGELOG
 
+## 2025-05-24 - 0.2.0 - Neural Network Operations and Device Handling Overhaul
+
+### Major Changes
+- **Complete Neural Network Operations Refactoring**
+  - Centralized all neural network operations in dedicated `device/nn.py` module
+  - Added comprehensive type safety and device compatibility checks
+  - Implemented proper tensor dtype handling across operations
+  - Added support for embedding, linear, and layer normalization operations
+  - Fixed critical issues with embedding operations on MPS devices
+
+- **Enhanced Device Management**
+  - Improved device redirection logic for better compatibility
+  - Added robust type conversion handling for tensor operations
+  - Fixed device-specific normalization issues
+  - Enhanced memory management for tensor operations
+
+- **Modular Architecture**
+  - Reorganized codebase into logical modules for better maintainability
+  - Separated device-specific operations into dedicated modules
+  - Implemented helper utilities for common tensor operations
+  - Improved code reusability and reduced duplication
+
+- **Testing Infrastructure**
+  - Added comprehensive tests for neural network operations
+  - Enhanced test coverage for device handling
+  - Improved test reliability and reproducibility
+  - Added transformer model integration tests
+
+### Breaking Changes
+- Neural network operations now enforce stricter type checking
+- Device handling may require explicit dtype specifications in some cases
+- Embedding operations now handle normalization differently
+
+### Known Issues
+- Some CUDA-specific operations may not have full MPS equivalents
+- Performance implications when falling back to CPU for unsupported operations
+
+### Next Steps
+- Implementation of attention mechanisms
+- Support for more neural network operations
+- Enhanced error handling and diagnostics
+- Performance optimizations for device-specific operations
+
+### Testing Notes
+We need testers to validate the following scenarios:
+1. Transformer model inference on MPS devices
+2. Large-scale embedding operations
+3. Mixed-precision training workflows
+4. Multi-device tensor operations
+
+Please report any issues or unexpected behavior through the issue tracker.
+
 ## 2025-03-16 - 0.1.1
 
 ### Interim Checkpoint Release
