@@ -1,127 +1,169 @@
 # TorchDevice Test Suite
 
-This directory contains the test suite for the TorchDevice module. The tests ensure that TorchDevice correctly redirects CUDA calls to MPS (Metal Performance Shaders) and vice versa, with a fallback to CPU if neither is available.
+## Overview
 
-## Test Structure
+The test suite is organized to mirror the main project structure, with dedicated test modules for each component. The tests use Python's unittest framework with our custom `PrefixedTestCase` base class for consistent logging and output validation.
 
-### common/ (Directory)
+## Test Directory Structure
 
-This directory contains shared test utilities used across all test modules:
-
-- **test_utils.py**: Provides the `PrefixedTestCase` base class extending `unittest.TestCase` with:
-  - Standard test setup and teardown procedures
-  - Consistent test output formatting
-  - Logging methods (`info`, `print_debug`, `warning`, `error`) for test diagnostics
-  - Clear separation between test messages and TDLogger output
-
-- **log_diff.py**: Contains utilities for test log capture and verification:
-  - `setup_log_capture()`: Sets up logging capture for tests
-  - `teardown_log_capture()`: Cleans up after tests
-  - `diff_check()`: Compares captured logs with expected output files
-
-## Test Files
-
-### test_TorchDevice.py
-
-This is the main test file for the TorchDevice module. It includes tests for:
-
-- Device instantiation
-- Tensor operations
-- CUDA function calls
-- Memory management
-- CUDA events
-- CUDA streams
-
-### test_cuda_operations.py
-
-This file contains comprehensive tests for CUDA operations, focusing on:
-
-- Basic tensor operations
-- Matrix multiplication
-- CUDA stream operations
-- CUDA event operations
-- Stream and event interactions
-- Multiple streams
-- Stream synchronization and waiting mechanisms
-
-These tests are derived from real-world usage patterns found in the `test_projects` directory to ensure that TorchDevice works correctly with typical PyTorch CUDA code.
-
-### test_cpu_mps_operations.py
-
-This file tests CPU and MPS operations specifically, ensuring:
-
-- Proper tensor creation on both CPU and MPS devices
-- Correct tensor operations on device-specific tensors
-- Neural network operations on both devices
-- Device conversion between CPU and MPS
-- MPS device properties and behavior
-
-### test_submodule.py
-
-This file defines the `ModelTrainer` class, which is used in tests to simulate training operations while ensuring device compatibility.
-
-### test_tdlogger/ (Directory)
-
-This directory contains tests for the TDLogger module, which is responsible for logging device operations and redirections. See the [TDLogger Test Suite README](test_tdlogger/README.md) for more details.
-
-The TDLogger tests include:
-- Basic logging functionality
-- Nested function calls
-- Device operations
-- Utility functions for log capture and comparison
+```
+tests/
+├── core/                   # Tests for core functionality
+│   ├── test_device.py     # Device handling tests
+│   ├── test_patch.py      # Patching mechanism tests
+│   └── test_logger.py     # Logging system tests
+│
+├── ops/                   # Tests for operations
+│   ├── memory/           # Memory management tests
+│   ├── nn/               # Neural network tests
+│   ├── random/           # Random number generation tests
+│   ├── streams/          # Stream handling tests
+│   ├── events/           # Event handling tests
+│   ├── autograd/         # Automatic differentiation tests
+│   └── optim/            # Optimization tests
+│
+├── utils/                # Tests for utilities
+│   ├── test_compile.py  # Compilation utility tests
+│   ├── test_profiling.py # Profiling tool tests
+│   └── test_type_utils.py # Type utility tests
+│
+├── common/               # Shared test infrastructure
+│   ├── test_utils.py    # Common test utilities
+│   └── log_diff.py      # Log comparison tools
+│
+└── integration/         # Integration tests
+    ├── test_models.py  # Full model tests
+    └── test_workflows.py # Common workflow tests
+```
 
 ## Running Tests
 
-To run all tests and install the TorchDevice package:
+### Basic Usage
 
 ```bash
-python tests/run_tests_and_install.py
+# Run all tests
+python run_tests_and_install.py
+
+# Run specific test module
+python run_tests_and_install.py --test-only tests/core/test_device.py
+
+# Update expected outputs
+python run_tests_and_install.py --test-only --update-expected tests/core/test_device.py
 ```
 
-This script will:
-1. Run all tests in the tests directory
-2. If tests pass, build the package
-3. Install the package in development mode
+### Test Environment Variables
 
-To run only tests without building and installing:
+- `TORCHDEVICE_TEST_MODE`: Set to '1' to enable test mode
+- `TORCHDEVICE_LOG_LEVEL`: Control log verbosity (default: 'INFO')
+- `TORCHDEVICE_TEST_DEVICE`: Specify test device ('cuda', 'mps', or 'cpu')
 
-```bash
-python tests/run_tests_and_install.py --test-only
+## Writing Tests
+
+### Base Test Class
+
+Use `PrefixedTestCase` as your base class:
+
+```python
+from tests.common.test_utils import PrefixedTestCase
+
+class TestDeviceHandling(PrefixedTestCase):
+    def setUp(self):
+        super().setUp()
+        # Your setup code
+
+    def test_device_selection(self):
+        # Your test code
 ```
 
-To update expected output files for tests that use diff checking:
+### Test Categories
 
-```bash
-python tests/run_tests_and_install.py --update-expected
+1. **Unit Tests**: Test individual components in isolation
+2. **Integration Tests**: Test component interactions
+3. **Regression Tests**: Prevent previously fixed bugs
+4. **Performance Tests**: Verify performance characteristics
+
+### Best Practices
+
+1. **Test Organization**
+   - One test class per module/feature
+   - Clear test method names
+   - Logical test grouping
+
+2. **Test Coverage**
+   - Test both success and failure cases
+   - Include edge cases
+   - Test type checking
+   - Test error handling
+
+3. **Test Independence**
+   - Each test should be independent
+   - Clean up resources in tearDown
+   - Don't rely on test execution order
+
+4. **Assertions**
+   - Use specific assertions
+   - Include meaningful error messages
+   - Check both values and types
+
+5. **Documentation**
+   - Document test purpose
+   - Document test requirements
+   - Document expected behavior
+
+### Example Test
+
+```python
+from tests.common.test_utils import PrefixedTestCase
+import torch
+import TorchDevice
+
+class TestDeviceSelection(PrefixedTestCase):
+    """Tests for device selection and redirection."""
+
+    def setUp(self):
+        super().setUp()
+        self.original_device = torch.device('cpu')
+
+    def test_cuda_to_mps_redirection(self):
+        """Test CUDA to MPS redirection when CUDA is unavailable."""
+        # Arrange
+        requested_device = torch.device('cuda')
+
+        # Act
+        actual_device = TorchDevice.get_device(requested_device)
+
+        # Assert
+        self.assertEqual(actual_device.type, 'mps',
+                        "CUDA device should be redirected to MPS")
 ```
 
-To run individual test files:
+## Log Validation
 
-```bash
-python tests/run_tests_and_install.py --test-only tests/test_TorchDevice.py
-python tests/run_tests_and_install.py --test-only tests/test_cuda_operations.py
-python tests/run_tests_and_install.py --test-only tests/test_tdlogger/test_basic.py
-```
+The test suite includes automatic log validation:
 
-## Test Coverage
-
-The test suite covers:
-
-- Basic functionality: Device detection, tensor creation, and operations
-- CUDA events: Creation, recording, synchronization, and timing
-- CUDA streams: Creation, operations, synchronization, and context management
-- Error handling: Proper fallback to available devices
-- Real-world scenarios: Tests derived from typical PyTorch CUDA usage patterns
-- Logging: Capturing and verifying log messages for device operations and redirections
+1. Expected outputs are stored in `.expected` files
+2. Test runs compare actual output with expected
+3. Update expected outputs with `--update-expected`
 
 ## Adding New Tests
 
-When adding new tests:
+1. Create test file in appropriate directory
+2. Inherit from `PrefixedTestCase`
+3. Implement `setUp` and `tearDown` if needed
+4. Add test methods
+5. Generate expected outputs
+6. Add to test discovery
 
-1. Extend the `PrefixedTestCase` class from `common/test_utils.py` for consistent test behavior
-2. Use the logging methods provided by `PrefixedTestCase` for test diagnostics
-3. Utilize `setup_log_capture()` and `diff_check()` from `common/log_diff.py` for log verification
-4. Ensure tests are independent and can run in any order
-5. Add appropriate assertions to verify functionality
-6. Document the purpose of the test in docstrings
-7. If adding a new test file, follow the naming convention `test_*.py`
+## Continuous Integration
+
+Tests are automatically run on:
+- Pull requests
+- Main branch commits
+- Release tags
+
+## Performance Testing
+
+- Use `@performance_test` decorator
+- Set baseline expectations
+- Compare against previous results
+- Account for hardware variations

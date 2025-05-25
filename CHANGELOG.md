@@ -1,5 +1,30 @@
 # CHANGELOG
 
+
+## [Unreleased]
+
+### Added
+- Complete project restructuring with new modular architecture
+  - New `core/` module for central device handling
+  - New `ops/` module for operation-specific implementations
+  - New `utils/` module for shared utilities
+- Added comprehensive documentation in `docs/project_structure.md`
+- Added new modules for enhanced functionality:
+  - Events handling and synchronization
+  - Autograd support
+  - Optimization algorithms
+  - Enhanced stream management
+
+### Changed
+- Reorganized existing code into logical modules
+- Updated import paths to reflect new structure
+- Consolidated patch functionality into core module
+- Improved separation of concerns between modules
+
+### Removed
+- Redundant patch implementations
+- Deprecated compile-related files
+
 ## 2025-05-26 - 0.4.0 - Transformer Support and Attention Mechanisms
 
 ### Major Changes
