@@ -2,7 +2,7 @@
 TorchDevice Neural Network Function Patches
 -----------------------------------------
 This module centralizes all patches for torch.nn and torch.nn.functional operations
-to ensure proper device handling across different hardware.
+to ensure proper device and type handling across different hardware.
 
 Key areas covered:
 - Embedding operations
@@ -15,15 +15,16 @@ Key areas covered:
 
 import torch
 import torch.nn.functional as F
-from typing import Optional, Union, Tuple
+from typing import Optional, Sequence
 from ..modules.TDLogger import auto_log
 
-
 # Store original functions
-t_embedding = torch.embedding if hasattr(torch, 'embedding') else None
+t_nn_embedding = torch.nn.Embedding
 t_nn_functional_embedding = F.embedding
-t_linear = F.linear if hasattr(F, 'linear') else None
-t_layer_norm = F.layer_norm if hasattr(F, 'layer_norm') else None
+t_nn_linear = torch.nn.Linear
+t_nn_functional_linear = F.linear
+t_nn_layer_norm = torch.nn.LayerNorm
+t_nn_functional_layer_norm = F.layer_norm
 
 
 def _ensure_tensor_device(tensor: torch.Tensor, target_device: torch.device) -> torch.Tensor:
@@ -37,27 +38,19 @@ def _ensure_tensor_dtype(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tens
 
 
 @auto_log()
-def embedding_replacement(
-        input: torch.Tensor,
-        weight: torch.Tensor,
-        padding_idx: Optional[int] = None,
-        max_norm: Optional[float] = None,
-        norm_type: float = 2.0,
-        scale_grad_by_freq: bool = False,
-        sparse: bool = False) -> torch.Tensor:
+def t_nn_embedding_forward(
+        self,
+        input: torch.Tensor) -> torch.Tensor:
     """
-    Replacement for torch.embedding and torch.nn.functional.embedding that handles device redirection.
-    Ensures weight and input tensors are on the same device and have correct types.
-    
-    Args:
-        input: Input tensor containing indices into the embedding matrix
-        weight: The embedding matrix with shape (num_embeddings, embedding_dim)
-        padding_idx: If specified, the entries at padding_idx do not contribute to the gradient
-        max_norm: If given, each embedding vector with norm larger than max_norm is renormalized
-        norm_type: The p of the p-norm to compute for the max_norm option
-        scale_grad_by_freq: If given, gradient of each embedding is scaled by its frequency
-        sparse: If True, gradient w.r.t. weight will be a sparse tensor
+    Forward pass for nn.Embedding that handles device redirection.
     """
+    weight = self.weight
+    padding_idx = self.padding_idx
+    max_norm = self.max_norm
+    norm_type = self.norm_type
+    scale_grad_by_freq = self.scale_grad_by_freq
+    sparse = self.sparse
+
     # Ensure tensors are on same device
     weight = _ensure_tensor_device(weight, input.device)
     
@@ -67,35 +60,28 @@ def embedding_replacement(
     # Handle max_norm separately to avoid type issues
     if max_norm is not None:
         with torch.no_grad():
-            # Use clone to avoid modifying the original weight tensor
-            weight = weight.clone()
-            norms = weight.float().norm(norm_type, dim=-1)
+            norms = weight.norm(norm_type, dim=-1)
             mask = norms > max_norm
             if mask.any():
                 scale = (max_norm / norms[mask]).unsqueeze(-1)
+                weight = weight.clone()
                 weight[mask] = weight[mask] * scale.to(weight.dtype)
     
-    # Call original embedding function without max_norm
-    if t_nn_functional_embedding is not None:
-        return t_nn_functional_embedding(
-            input, weight, padding_idx, None, norm_type, scale_grad_by_freq, sparse
-        )
+    return t_nn_functional_embedding(
+        input, weight, padding_idx, None, norm_type, scale_grad_by_freq, sparse
+    )
 
 
 @auto_log()
-def linear_replacement(
-        input: torch.Tensor,
-        weight: torch.Tensor,
-        bias: Optional[torch.Tensor] = None) -> torch.Tensor:
+def t_nn_linear_forward(
+        self,
+        input: torch.Tensor) -> torch.Tensor:
     """
-    Replacement for torch.nn.functional.linear that handles device redirection.
-    Ensures all tensors are on the same device and have compatible dtypes.
-    
-    Args:
-        input: Input tensor of shape (*, in_features)
-        weight: Weight matrix of shape (out_features, in_features)
-        bias: Optional bias tensor of shape (out_features)
+    Forward pass for nn.Linear that handles device redirection.
     """
+    weight = self.weight
+    bias = self.bias
+
     # Ensure tensors are on same device
     weight = _ensure_tensor_device(weight, input.device)
     if bias is not None:
@@ -107,28 +93,21 @@ def linear_replacement(
     if bias is not None and bias.dtype != input.dtype:
         bias = bias.to(dtype=input.dtype)
     
-    if t_linear is not None:
-        return t_linear(input, weight, bias)
+    return t_nn_functional_linear(input, weight, bias)
 
 
 @auto_log()
-def layer_norm_replacement(
-        input: torch.Tensor,
-        normalized_shape: Union[int, Tuple[int, ...]],
-        weight: Optional[torch.Tensor] = None,
-        bias: Optional[torch.Tensor] = None,
-        eps: float = 1e-5) -> torch.Tensor:
+def t_nn_layer_norm_forward(
+        self,
+        input: torch.Tensor) -> torch.Tensor:
     """
-    Replacement for torch.nn.functional.layer_norm that handles device redirection.
-    Ensures all tensors are on the same device and have compatible dtypes.
-    
-    Args:
-        input: Input tensor of shape (N, *)
-        normalized_shape: Input shape from an expected input of size
-        weight: Optional weight tensor of shape (normalized_shape)
-        bias: Optional bias tensor of shape (normalized_shape)
-        eps: Small value added to denominator for numerical stability
+    Forward pass for nn.LayerNorm that handles device redirection.
     """
+    weight = self.weight
+    bias = self.bias
+    normalized_shape = self.normalized_shape
+    eps = self.eps
+
     # Ensure tensors are on same device and have compatible dtypes
     if weight is not None:
         weight = _ensure_tensor_device(weight, input.device)
@@ -137,22 +116,21 @@ def layer_norm_replacement(
         bias = _ensure_tensor_device(bias, input.device)
         bias = _ensure_tensor_dtype(bias, input.dtype)
     
-    if t_layer_norm is not None:
-        return t_layer_norm(input, normalized_shape, weight, bias, eps)
+    return t_nn_functional_layer_norm(input, normalized_shape, weight, bias, eps)
 
 
 def apply_patches() -> None:
     """Apply all neural network related patches."""
-    # Patch embedding functions
-    if hasattr(torch, 'embedding'):
-        torch.embedding = embedding_replacement
-    if hasattr(torch.nn.functional, 'embedding'):
-        torch.nn.functional.embedding = embedding_replacement
+    # Patch nn.Embedding
+    torch.nn.Embedding.forward = t_nn_embedding_forward
     
-    # Patch linear operation
-    if hasattr(torch.nn.functional, 'linear'):
-        torch.nn.functional.linear = linear_replacement
+    # Patch nn.Linear
+    torch.nn.Linear.forward = t_nn_linear_forward
     
-    # Patch layer normalization
-    if hasattr(torch.nn.functional, 'layer_norm'):
-        torch.nn.functional.layer_norm = layer_norm_replacement
+    # Patch nn.LayerNorm
+    torch.nn.LayerNorm.forward = t_nn_layer_norm_forward
+    
+    # Patch functional interface
+    torch.nn.functional.embedding = t_nn_functional_embedding
+    torch.nn.functional.linear = t_nn_functional_linear
+    torch.nn.functional.layer_norm = t_nn_functional_layer_norm

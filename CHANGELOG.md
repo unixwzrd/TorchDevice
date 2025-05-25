@@ -1,5 +1,79 @@
 # CHANGELOG
 
+## 2025-05-26 - 0.4.0 - Transformer Support and Attention Mechanisms
+
+### Major Changes
+- **Comprehensive Transformer Support**
+  - Added full support for transformer model operations
+  - Implemented scaled dot-product attention mechanism
+  - Added multi-head attention support with BERT compatibility
+  - Enhanced device handling for attention operations
+  - Added proper type checking and device compatibility
+  - Implemented automatic device redirection for attention ops
+
+- **Neural Network Enhancements**
+  - Fixed embedding operation issues and improved type safety
+  - Enhanced tensor device and dtype management
+  - Added proper error handling and fallbacks
+  - Improved performance for common operations
+  - Added comprehensive tensor type validation
+  - Fixed embedding_renorm_ operation issues
+
+- **Architecture Improvements**
+  - Centralized neural network operations in `device/nn.py`
+  - Added dedicated attention mechanism module in `device/attention.py`
+  - Enhanced patch application system for better modularity
+  - Improved device redirection for transformer operations
+  - Added automatic patch registration for new modules
+
+- **Testing and Validation**
+  - Added comprehensive test suite for attention mechanisms
+  - Enhanced BERT model compatibility tests
+  - Added tests for embedding and linear operations
+  - Improved test coverage for layer normalization
+  - Added transformer model integration tests
+  - Enhanced device compatibility test coverage
+
+### Breaking Changes
+- Attention mechanisms now enforce stricter type checking
+- Some attention operations may require explicit device specifications
+- Neural network operations require proper dtype specifications
+- Device handling follows stricter validation rules
+
+### Known Issues
+- Some specialized CUDA attention operations may not have direct MPS equivalents
+- Performance implications when using attention mechanisms on CPU fallback
+- Certain CUDA-specific optimizations may not be available on MPS
+- Some transformer operations may require additional memory on MPS devices
+
+### Next Steps
+- Optimization of attention operations for different hardware
+- Support for more transformer architectures
+- Enhanced memory management for large models
+- Performance profiling and improvements
+- Implementation of additional CUDA-specific features
+- Enhanced error reporting and diagnostics
+
+### Testing Notes
+We need testers to validate the following scenarios:
+1. Large transformer model inference
+2. Multi-head attention performance
+3. Mixed-precision training with attention
+4. Cross-attention mechanisms
+5. Causal attention masking
+6. Device switching during model execution
+7. Memory usage patterns on different devices
+8. Performance comparison between CUDA and MPS
+
+Please report any issues or unexpected behavior through the issue tracker.
+
+### Package Updates
+- Version updated to 0.4.0 in all relevant files
+- Added transformers>=4.30.0 as a dependency
+- Updated package classifiers to reflect beta status
+- Enhanced package discovery with find_packages()
+- Added new module exports in __init__.py
+
 ## 2025-05-24 - 0.2.0 - Neural Network Operations and Device Handling Overhaul
 
 ### Major Changes

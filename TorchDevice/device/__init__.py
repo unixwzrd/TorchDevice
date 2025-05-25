@@ -9,5 +9,6 @@ from . import random
 from . import streams
 from . import unassigned
 from . import nn
+from . import attention
 
-__all__ = ['memory', 'random', 'streams', 'unassigned', 'nn']
+__all__ = ['memory', 'random', 'streams', 'unassigned', 'nn', 'attention']

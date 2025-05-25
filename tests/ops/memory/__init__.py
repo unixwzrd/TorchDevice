@@ -1,0 +1,4 @@
+"""
+memory module for TorchDevice
+"""
+

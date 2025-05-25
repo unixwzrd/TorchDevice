@@ -9,7 +9,9 @@ import torch
 import numpy as np
 import random
 from pathlib import Path
-from common.log_diff import setup_log_capture, teardown_log_capture
+from common.log_diff import setup_log_capture, teardown_log_capture, diff_check
+
+__all__ = ['PrefixedTestCase', 'diff_check', 'devices_equivalent', 'set_deterministic_seed']
 
 
 def set_deterministic_seed(seed=42):
