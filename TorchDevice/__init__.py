@@ -1,20 +1,21 @@
 """
-TorchDevice library for managing PyTorch device operations.
-This module patches PyTorch's CUDA functionality to work seamlessly with MPS (and vice-versa)
-upon import. Users should never need to call patch functions directly—patching is automatic.
+TorchDevice - A PyTorch Device Abstraction Layer
+----------------------------------------------
+Enables seamless code portability between NVIDIA CUDA, Apple Silicon (MPS),
+and CPU hardware for PyTorch applications.
 """
 
-__version__ = '0.4.0'
+__version__ = "0.1.0"
 
-from .TorchDevice import TorchDevice
-from .modules.TDLogger import auto_log
-from .device import nn, attention
+from .core.device import get_default_device, set_default_device
+from .core.patch import ensure_patches_applied
 
-# Apply all monkey-patches automatically on import
-# Users should never call patch functions directly.
-TorchDevice.apply_patches()
+# Apply patches when the module is imported
+ensure_patches_applied()
 
-# Expose key functions at module level
-get_default_device = TorchDevice.get_default_device
+__all__ = [
+    'get_default_device',
+    'set_default_device',
+]
 
-__all__ = ['TorchDevice', 'auto_log', '__version__', 'nn', 'attention', 'get_default_device']
+

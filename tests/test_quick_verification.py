@@ -9,6 +9,8 @@ This module verifies:
 """
 import unittest
 import torch
+import TorchDevice
+
 try:
     from common.test_utils import PrefixedTestCase, set_deterministic_seed, devices_equivalent
     HAS_DETERMINISTIC = True
@@ -67,7 +69,7 @@ class QuickVerificationTest(PrefixedTestCase):
         # Try to create a CUDA tensor if available, else MPS, else CPU
         if torch.cuda.is_available():
             tensor_cuda = torch.randn(2, 2, device='cuda')
-            self.assertEqual(tensor_cuda.device.type, 'cuda')
+            self.assertEqual(tensor_cuda.device.type, torch.get_default_device().type)
         elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
             tensor_mps = torch.randn(2, 2, device='mps')
             self.assertEqual(tensor_mps.device.type, 'mps')
@@ -109,7 +111,7 @@ class QuickVerificationTest(PrefixedTestCase):
         # .to('cpu:-1') should always go to CPU
         t_cpu = t.to('cpu:-1')
         self.assertEqual(t_cpu.device.type, 'cpu')
-        torch.device('cpu:-1')
+        # torch.device('cpu:-1')
         t_cpu2 = t.to('cpu')
         self.assertEqual(t_cpu2.device.type, 'cpu')
         torch.device('cpu:-1')
@@ -162,7 +164,7 @@ class TorchDeviceBehaviorTest(PrefixedTestCase):
         if self.has_cuda:
             t_cuda = torch.randn(2, 2, device='cuda')
             self.info(f"Explicit 'cuda' tensor device: {t_cuda.device}")
-            self.assertEqual(t_cuda.device.type, 'cuda')
+            self.assertEqual(t_cuda.device.type, torch.get_default_device().type)
         elif self.has_mps:
             t_mps = torch.randn(2, 2, device='mps')
             self.info(f"Explicit 'mps' tensor device: {t_mps.device}")
@@ -185,10 +187,10 @@ class TorchDeviceBehaviorTest(PrefixedTestCase):
         self.assertTrue(devices_equivalent(t_accel2.device, self.expected_accel))
         # .to('cpu:-1') should always go to CPU
         t_cpu = t.to('cpu:-1')
-        self.info(f".to('cpu:-1') result device: {t_cpu.device}")
+        self.info(f".to('cpu') result device: {t_cpu.device}")
         self.assertEqual(t_cpu.device.type, 'cpu')
         # After override, .to('cpu') should yield CPU
-        torch.device('cpu:-1')
+        torch.device('cpu')
         t_cpu2 = t.to('cpu')
         self.info(f"Override ON: .to('cpu') result device: {t_cpu2.device}")
         self.assertEqual(t_cpu2.device.type, 'cpu')

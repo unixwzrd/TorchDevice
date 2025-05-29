@@ -1,0 +1,4 @@
+"""
+events module for TorchDevice
+"""
+
