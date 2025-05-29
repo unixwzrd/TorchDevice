@@ -1,22 +1,9 @@
 """
-TorchDevice Memory Module
----------------------
-Memory management and monitoring.
+TorchDevice Memory Operations
+-------------------------
+Memory management and emulation functionality.
 """
 
-from . import management
-from . import stats
+from .patch import apply_patches
 
-print("Importing TorchDevice/ops/memory/__init__.py")
-
-__all__: list[str] = [
-    'management',
-    'stats',
-    'apply_patches'
-]
-
-def apply_patches() -> None:
-    """Apply memory-related patches."""
-    print("Applying memory patches")
-    management.apply_patches()
-    stats.apply_patches()
+__all__ = ['apply_patches']
