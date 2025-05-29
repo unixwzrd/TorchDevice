@@ -43,7 +43,7 @@ class TestTorchDevice(PrefixedTestCase):
         self.assertEqual(device_cuda.type, expected_device_type)
         self.assertEqual(device_mps.type, expected_device_type)
         # Patch: device_cpu should match the hardware default device
-        expected_redirected_device = TorchDevice.TorchDevice.get_default_device()
+        expected_redirected_device = torch.get_default_device()
         self.assertTrue(devices_equivalent(device_cpu, expected_redirected_device))
         self.info("Device instantiation tests completed successfully")
         
@@ -55,7 +55,7 @@ class TestTorchDevice(PrefixedTestCase):
         self.info("Testing CPU operations")
         cpu_tensor = torch.randn(10, device='cpu')
         # Patch: cpu_tensor should match the hardware default device
-        expected_redirected_device = TorchDevice.TorchDevice.get_default_device()
+        expected_redirected_device = torch.get_default_device()
         self.assertTrue(devices_equivalent(cpu_tensor.device, expected_redirected_device))
         
         # Test MPS operations if available
@@ -181,7 +181,7 @@ class TestTorchDevice(PrefixedTestCase):
             
             if self.has_cuda:
                 expected_type = 'cuda'
-                if self.has_mps and TorchDevice.TorchDevice.get_default_device() == 'mps':
+                if self.has_mps and torch.get_default_device() == 'mps':
                     expected_type = 'mps'
                 self.assertEqual(t_cuda0.device.type, expected_type)
                 self.assertEqual(t_mps0.device.type, expected_type)

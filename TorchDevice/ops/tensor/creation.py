@@ -1,11 +1,11 @@
 """
-TorchDevice Tensor Creation Module
-----------------------------
-Tensor creation utilities.
+TorchDevice Tensor Creation Operations
+--------------------------------
+Tensor creation and manipulation operations.
 """
 
 import torch
-from typing import List, Callable
+from typing import List, Callable, Any
 from ...core.logger import log_info, auto_log
 from ...core.device import torch_device_replacement
 
@@ -46,6 +46,31 @@ def apply_patches() -> None:
             original_func = getattr(torch, func_name)
             patched_func = tensor_creation_wrapper(original_func)
             setattr(torch, func_name, patched_func)
+
+    torch.Tensor.cpu = tensor_cpu_replacement
+    torch.Tensor.numpy = numpy_replacement
+
+@auto_log()
+def tensor_cpu_replacement(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Replacement for torch.Tensor.cpu() that follows device redirection policy.
+    If CPU override is active, moves to CPU, otherwise redirects to default device.
+    """
+    return tensor.to('cpu')
+
+@auto_log()
+def numpy_replacement(tensor: torch.Tensor) -> Any:
+    """
+    Replacement for torch.Tensor.numpy() that moves tensor to CPU first if needed.
+    This always needs to go to CPU regardless of device policy since numpy()
+    requires CPU tensors.
+    """
+    # Always move to CPU for numpy conversion - this is a special case
+    # that must bypass the device redirection policy
+    if tensor.device.type != 'cpu':
+        cpu_tensor = tensor.to('cpu')
+        return cpu_tensor.numpy()
+    return tensor.numpy()
 
 __all__: List[str] = [
     'apply_patches'

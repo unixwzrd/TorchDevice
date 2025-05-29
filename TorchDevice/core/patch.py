@@ -5,9 +5,9 @@ Core patching functionality for TorchDevice.
 """
 
 import torch
-from typing import List, Any, Optional
+from typing import List, Any
 from .logger import log_info, auto_log
-from .device import apply_patches as apply_device_patches, get_default_device
+from .device import apply_patches as apply_device_patches
 
 log_info("Importing TorchDevice/core/patch.py")
 
@@ -57,6 +57,11 @@ def apply_all_patches() -> None:
 
     # Apply device patches first
     apply_device_patches()
+
+    # Apply device context patches
+    log_info("Applying device context patches")
+    from ..ops.device import apply_patches as apply_device_context_patches
+    apply_device_context_patches()
 
     # Apply memory patches
     log_info("Applying memory patches")
