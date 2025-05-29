@@ -234,6 +234,9 @@ def apply_patches() -> None:
     # Replace device constructor
     torch.device = DeviceWrapper
     
+    # Add get_default_device to torch namespace
+    torch.get_default_device = get_default_device
+    
     # Patch tensor methods
     torch.Tensor.to = tensor_to_replacement
     torch.Tensor.cpu = tensor_cpu_replacement

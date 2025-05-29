@@ -13,7 +13,6 @@ from common.test_utils import PrefixedTestCase
 # Import TorchDevice to ensure CUDA redirection is set up
 import TorchDevice
 
-
 class TestCUDAStubs(PrefixedTestCase):
     """Test that all expected CUDA function stubs are available."""
 
@@ -28,9 +27,10 @@ class TestCUDAStubs(PrefixedTestCase):
         self.device = torch.device('cuda' if self.has_cuda else 'mps' if self.has_mps else 'cpu')
         self.info("Using device: %s", self.device)
 
-        # Check which device TorchDevice is using
-        self.default_device = TorchDevice.TorchDevice.get_default_device()
-        self.info(f"TorchDevice using default device: {self.default_device}")
+        # Get the default device through PyTorch's interface
+        # TorchDevice will intercept this call and handle redirection
+        self.default_device = torch.get_default_device()
+        self.info(f"Using default device: {self.default_device}")
 
     def test_cuda_functions(self):
         """Test that all expected CUDA functions are available and return expected types."""
