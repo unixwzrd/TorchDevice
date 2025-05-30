@@ -55,10 +55,15 @@ def auto_log():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            log_message(f"Called {func.__name__}", "calling the entry now")
-            result = func(*args, **kwargs)
-            # Don't format the result to avoid recursion with tensor operations
-            log_message(f"{func.__name__} returned", func.__name__)
+            result = None
+            # Only log if log level is INFO or lower
+            if LOG_LEVELS.get(LOG_LEVEL, 20) <= 20 and func.__name__ not in _INTERNAL_LOG_SKIP:
+                log_message(f"Called {func.__name__}", "calling the entry now")
+                result = func(*args, **kwargs)
+                # log_message(f"{func.__name__} returned {result}", func.__name__)
+                log_message(f"{func.__name__} returned", func.__name__)
+            else:
+                result = func(*args, **kwargs)
             return result
         return wrapper
     return decorator
