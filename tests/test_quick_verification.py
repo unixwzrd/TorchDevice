@@ -111,7 +111,6 @@ class QuickVerificationTest(PrefixedTestCase):
         # .to('cpu:-1') should always go to CPU
         t_cpu = t.to('cpu:-1')
         self.assertEqual(t_cpu.device.type, 'cpu')
-        # torch.device('cpu:-1')
         t_cpu2 = t.to('cpu')
         self.assertEqual(t_cpu2.device.type, 'cpu')
         torch.device('cpu:-1')
@@ -190,7 +189,6 @@ class TorchDeviceBehaviorTest(PrefixedTestCase):
         self.info(f".to('cpu') result device: {t_cpu.device}")
         self.assertEqual(t_cpu.device.type, 'cpu')
         # After override, .to('cpu') should yield CPU
-        torch.device('cpu')
         t_cpu2 = t.to('cpu')
         self.info(f"Override ON: .to('cpu') result device: {t_cpu2.device}")
         self.assertEqual(t_cpu2.device.type, 'cpu')
