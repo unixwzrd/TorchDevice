@@ -159,6 +159,7 @@ def tensor_to_replacement(tensor: torch.Tensor, *args, **kwargs) -> torch.Tensor
         device = torch_device_replacement(kwargs['device'])
         kwargs['device'] = device
     
+    # Use original to() method directly to avoid recursion
     return t_Tensor_to(tensor, *args, **kwargs)
 
 
