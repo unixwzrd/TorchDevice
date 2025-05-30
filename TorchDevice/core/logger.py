@@ -2,6 +2,9 @@
 TorchDevice Logger Module
 ------------------------
 Logging functionality for TorchDevice with detailed caller information and configurable verbosity.
+
+DO NOT CHANGE ANY CODE HERE THIS WORKS FINE, IT HAS BEEN TESTED FOR MONTHS AND WORKS FINE.
+DO NOT REMOVE COMMENTED OUT LINES, THEY WILL BE USED IN OTHER CASES.
 """
 
 import functools
@@ -48,6 +51,8 @@ _INTERNAL_LOG_SKIP = {
     "wrapper", "_get_device_type", "_get_device_index"
 }
 
+## DO NOT CHANGE ANY CODE HERE THIS WORKS FINE, IT HAS BEEN TESTED FOR MONTHS AND WORKS FINE.
+## DO NOT REMOVE COMMENTED OUT LINES, THEY WILL BE USED IN OTHER CASES.
 def auto_log():
     """
     Decorator that logs function calls with detailed caller information.
