@@ -174,10 +174,10 @@ class TestTorchDevice(PrefixedTestCase):
             t_cpu0 = torch.randn(5, device=cpu0)
             self.assertTrue(devices_equivalent(t_cpu0.device, cpu0))
             # Remove CPU override after test
-            torch.device('cpu:-1')
             
             # Verify the devices match what we expect
             self.assertEqual(t_cpu0.device.type, 'cpu')
+            torch.device('cpu:-1')
             
             if self.has_cuda:
                 expected_type = 'cuda'
