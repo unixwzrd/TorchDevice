@@ -6,7 +6,7 @@ This is the single entry point for all patching logic.
 """
 
 import torch
-from .device import device, memory, random, streams, unassigned, nn
+from .device import device, memory, random, streams, unassigned
 from .modules import compile as compile_mod
 from .modules.TDLogger import log_info
 
@@ -17,14 +17,12 @@ def apply_all_patches() -> None:
     This includes core patches, compile/Dynamo patches, and deferred patches.
     """
     log_info("[TorchDevice] patch.apply_all_patches called")
-    
     # 1. Core patches
     device.apply_patches()
     memory.apply_patches()
     random.apply_patches()
     streams.apply_patches()
     unassigned.apply_patches()
-    nn.apply_patches()  # Neural network patches
 
     # 2. Compile/Dynamo patches (if not pure CPU)
     from .TorchDevice import TorchDevice as _TD
@@ -39,4 +37,4 @@ def apply_all_patches() -> None:
 
     # 3. Deferred patches (previously in _deferred_patches.py)
     compile_mod.patch_dynamo_config()
-    log_info("All patches applied successfully")
+    log_info("Deferred patching complete") 

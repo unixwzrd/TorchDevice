@@ -1,4 +1,0 @@
-"""
-optim module for TorchDevice
-"""
-

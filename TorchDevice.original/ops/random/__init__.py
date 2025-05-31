@@ -1,4 +1,0 @@
-"""
-random module for TorchDevice
-"""
-

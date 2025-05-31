@@ -30,6 +30,7 @@ t_Tensor_cuda = torch.Tensor.cuda
 t_nn_Module_cuda = torch.nn.Module.cuda
 t_Tensor_mps = torch.Tensor.mps if hasattr(torch.Tensor, 'mps') else None
 t_nn_Module_mps = torch.nn.Module.mps if hasattr(torch.nn.Module, 'mps') else None
+t_Tensor_numpy = torch.Tensor.numpy  # Add numpy method reference
 
 # Flag to prevent recursion
 _patched = False
@@ -220,6 +221,22 @@ def module_mps_replacement(module: torch.nn.Module) -> torch.nn.Module:
     return module_to_replacement(module, torch_device_replacement('mps'))
 
 
+@auto_log()
+def tensor_numpy_replacement(tensor: torch.Tensor):
+    """
+    Replacement for torch.Tensor.numpy() that moves tensor to CPU first if needed.
+    This always needs to go to CPU regardless of device policy since numpy()
+    requires CPU tensors.
+    """
+    # Always move to CPU for numpy conversion - this is a special case
+    # that must bypass the device redirection policy
+    if tensor.device.type != 'cpu':
+        # First move to CPU using original to() method
+        cpu_tensor = t_Tensor_to(tensor, 'cpu')
+        return t_Tensor_numpy(cpu_tensor)
+    return t_Tensor_numpy(tensor)
+
+
 def apply_patches() -> None:
     """Apply all device-related patches."""
     global _patched
@@ -242,6 +259,7 @@ def apply_patches() -> None:
     torch.Tensor.to = tensor_to_replacement
     torch.Tensor.cpu = tensor_cpu_replacement
     torch.Tensor.cuda = tensor_cuda_replacement
+    torch.Tensor.numpy = tensor_numpy_replacement  # Add numpy replacement
     if hasattr(torch.Tensor, 'mps'):
         torch.Tensor.mps = tensor_mps_replacement
     

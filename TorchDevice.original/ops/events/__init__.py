@@ -1,4 +1,0 @@
-"""
-events module for TorchDevice
-"""
-

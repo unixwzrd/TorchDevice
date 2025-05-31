@@ -1,4 +1,0 @@
-"""
-core module for TorchDevice
-"""
-

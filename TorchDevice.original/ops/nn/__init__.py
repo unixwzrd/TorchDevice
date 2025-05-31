@@ -1,4 +1,0 @@
-"""
-nn module for TorchDevice
-"""
-
