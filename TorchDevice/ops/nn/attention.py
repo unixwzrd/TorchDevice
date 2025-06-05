@@ -1,20 +1,21 @@
 """
 TorchDevice Neural Network Attention Module
-------------------------------------
+--------------------------------------
 Attention mechanism implementations.
 """
 
-from typing import List
-from ...core.logger import log_info
+from TorchDevice.core.logger import log_info
 
-log_info("Importing TorchDevice/ops/nn/attention.py")
+log_info("Initializing TorchDevice nn attention module")
+
+__all__: list[str] = []  # Will be populated as we add functionality
 
 
 def apply_patches() -> None:
     """Apply attention patches."""
     log_info("Applying attention patches")
+    # TODO: Implement attention patches
+    log_info("Attention patches applied")
 
 
-__all__: List[str] = [
-    'apply_patches'
-] 
+log_info("TorchDevice nn attention module initialized") 

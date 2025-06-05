@@ -1,29 +1,32 @@
 """
-TorchDevice Events Module
--------------------
-Event handling and synchronization.
+TorchDevice Events Operations Module
+-------------------------------
+Event management and synchronization.
 """
 
-from . import (
-    cuda_events,
-    mps_events,
-    synchronize
-)
+from TorchDevice.core.logger import log_info
+from . import cuda, mps, sync
 
-print("Importing TorchDevice/ops/events/__init__.py")
-
-__all__: list[str] = [
-    'cuda_events',
-    'mps_events',
-    'synchronize',
-    'apply_patches'
-]
+log_info("Initializing TorchDevice events module")
 
 
 def apply_patches() -> None:
-    """Apply event-related patches."""
-    print("Applying event patches")
-    cuda_events.apply_patches()
-    mps_events.apply_patches()
-    synchronize.apply_patches()
+    """Apply all event operation patches."""
+    log_info("Applying event operation patches")
+    
+    # Apply patches from each submodule
+    cuda.apply_patches()
+    mps.apply_patches()
+    sync.apply_patches()
+    
+    log_info("Event operation patches applied")
 
+
+__all__: list[str] = [
+    'cuda',
+    'mps',
+    'sync',
+    'apply_patches'
+]
+
+log_info("TorchDevice events module initialized") 

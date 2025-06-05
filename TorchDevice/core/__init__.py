@@ -1,18 +1,20 @@
 """
 TorchDevice Core Module
---------------------
-Core functionality for device handling and redirection.
+----------------------
+Core functionality for device handling, patching, and logging.
 """
 
-from . import device
-from . import patch
-from . import logger
+from .logger import log_info
+from . import logger, patch, tensors, device, hardware_info
 
-print("Importing TorchDevice/core/__init__.py")
+log_info("Initializing TorchDevice core module")
 
 __all__: list[str] = [
     'device',
+    'tensors',
+    'logger',
     'patch',
-    'logger'
+    'hardware_info'
 ]
 
+log_info("TorchDevice core module initialized")

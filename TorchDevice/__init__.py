@@ -1,21 +1,20 @@
 """
-TorchDevice - A PyTorch Device Abstraction Layer
-----------------------------------------------
-Enables seamless code portability between NVIDIA CUDA, Apple Silicon (MPS),
+TorchDevice - Transparent PyTorch Device Redirection
+-------------------------------------------------
+This module enables seamless code portability between NVIDIA CUDA, Apple Silicon (MPS),
 and CPU hardware for PyTorch applications.
 """
 
-__version__ = "0.1.0"
+__version__ = '0.2.0'
 
-from .core.device import get_default_device, set_default_device
-from .core.patch import ensure_patches_applied
+from .core.logger import log_info, auto_log
+from .core import patch
 
-# Apply patches when the module is imported
-ensure_patches_applied()
+log_info("Initializing TorchDevice package")
 
-__all__ = [
-    'get_default_device',
-    'set_default_device',
-]
+# Apply all patches when the module is imported
+patch.ensure_patched()
 
+__all__ = ['__version__', 'auto_log']
 
+log_info("TorchDevice package initialized") 

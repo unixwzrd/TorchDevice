@@ -1,20 +1,21 @@
 """
 TorchDevice Neural Network Layers Module
-----------------------------------
-Basic layer implementations.
+------------------------------------
+Basic neural network layer implementations.
 """
 
-from typing import List
-from ...core.logger import log_info
+from TorchDevice.core.logger import log_info
 
-log_info("Importing TorchDevice/ops/nn/layers.py")
+log_info("Initializing TorchDevice nn layers module")
+
+__all__: list[str] = []  # Will be populated as we add functionality
 
 
 def apply_patches() -> None:
     """Apply layer patches."""
     log_info("Applying layer patches")
+    # TODO: Implement layer patches
+    log_info("Layer patches applied")
 
 
-__all__: List[str] = [
-    'apply_patches'
-]
+log_info("TorchDevice nn layers module initialized") 

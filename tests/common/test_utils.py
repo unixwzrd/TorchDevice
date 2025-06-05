@@ -8,6 +8,7 @@ import unittest
 import torch
 import numpy as np
 import random
+import logging
 from pathlib import Path
 from common.log_diff import setup_log_capture, teardown_log_capture, diff_check
 
@@ -67,6 +68,7 @@ class PrefixedTestCase(unittest.TestCase):
         # Set up log capture for TDLogger
         test_dir = Path(__file__).parent.parent
         self.log_capture = setup_log_capture(self._testMethodName, test_dir)
+        self.logger = logging.getLogger(self._testMethodName) # Get the logger configured by setup_log_capture
         
         # Print test header
         print("\n" + "=" * 80)

@@ -1,43 +1,30 @@
 """
 TorchDevice Operations Module
--------------------------
-Contains all device-specific operations.
+---------------------------
+Operation-specific patches and implementations.
 """
 
+from TorchDevice.core.logger import log_info
 from . import (
-    autograd,
-    events,
+    device,
     memory,
     nn,
-    optim,
     random,
     streams,
-    tensor
+    events,
+    autograd
 )
 
-print("Importing TorchDevice/ops/__init__.py")
+log_info("Initializing TorchDevice ops module")
 
 __all__: list[str] = [
-    'autograd',
-    'events',
+    'device',
     'memory',
     'nn',
-    'optim',
     'random',
     'streams',
-    'tensor',
-    'apply_patches'
+    'events',
+    'autograd'
 ]
 
-
-def apply_patches() -> None:
-    """Apply all operation-related patches."""
-    print("Applying operation patches")
-    autograd.apply_patches()
-    events.apply_patches()
-    memory.apply_patches()
-    nn.apply_patches()
-    optim.apply_patches()
-    random.apply_patches()
-    streams.apply_patches()
-    tensor.apply_patches()
+log_info("TorchDevice ops module initialized") 

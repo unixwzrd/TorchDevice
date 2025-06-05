@@ -1,15 +1,20 @@
 """
-TorchDevice Random Module
---------------------
-Random number generation functionality.
+TorchDevice Random Operations Module
+--------------------------------
+Random number generation and seed management.
 """
 
-from . import (
-    generators,
-    distributions
-)
+from TorchDevice.core.logger import log_info
+from . import generators, distributions
 
-print("Importing TorchDevice/ops/random/__init__.py")
+log_info("Initializing TorchDevice random operations module")
+
+def apply_patches() -> None:
+    """Apply all random operation patches."""
+    log_info("Applying random operation patches")
+    generators.apply_patches()
+    distributions.apply_patches()
+    log_info("Random operation patches applied")
 
 __all__: list[str] = [
     'generators',
@@ -17,8 +22,4 @@ __all__: list[str] = [
     'apply_patches'
 ]
 
-def apply_patches() -> None:
-    """Apply random number generation patches."""
-    print("Applying random number generation patches")
-    generators.apply_patches()
-    distributions.apply_patches()
+log_info("TorchDevice random operations module initialized") 

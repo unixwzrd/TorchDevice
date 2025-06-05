@@ -1,20 +1,21 @@
 """
 TorchDevice Neural Network Activation Module
--------------------------------------
+---------------------------------------
 Activation function implementations.
 """
 
-from typing import List
-from ...core.logger import log_info
+from TorchDevice.core.logger import log_info
 
-log_info("Importing TorchDevice/ops/nn/activation.py")
+log_info("Initializing TorchDevice nn activation module")
+
+__all__: list[str] = []  # Will be populated as we add functionality
 
 
 def apply_patches() -> None:
     """Apply activation patches."""
     log_info("Applying activation patches")
+    # TODO: Implement activation patches
+    log_info("Activation patches applied")
 
 
-__all__: List[str] = [
-    'apply_patches'
-]
+log_info("TorchDevice nn activation module initialized") 

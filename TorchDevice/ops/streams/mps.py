@@ -1,31 +1,58 @@
 """
 TorchDevice MPS Streams Module
-------------------------
-MPS stream implementations.
+-------------------------
+MPS stream management and operations.
 """
 
-from typing import List
-from ...core.logger import log_info
+import torch
+from typing import Optional, Any
+from TorchDevice.core.logger import log_info, auto_log
 
-log_info("Importing TorchDevice/ops/streams/mps.py")
+# Store original functions if they exist (MPS might not have stream support yet)
+t_mps_current_stream = getattr(torch.mps, 'current_stream', None) if hasattr(torch, 'mps') else None
+t_mps_default_stream = getattr(torch.mps, 'default_stream', None) if hasattr(torch, 'mps') else None
 
 
-class MPSEvent:
-    """MPS event class."""
-    def __init__(self) -> None:
-        pass
+@auto_log()
+def current_stream(device: Optional[torch.device] = None) -> Optional[Any]:
+    """Get the current MPS stream."""
+    from TorchDevice.core.device import DeviceManager  # Local import
+    device = device or DeviceManager.get_default_device()
+    if device.type == 'mps' and t_mps_current_stream:
+        return t_mps_current_stream(device)
+    return None
 
-    def synchronize(self) -> None:
-        """Synchronize the event."""
-        pass
+
+@auto_log()
+def default_stream(device: Optional[torch.device] = None) -> Optional[Any]:
+    """Get the default MPS stream."""
+    from TorchDevice.core.device import DeviceManager  # Local import
+    device = device or DeviceManager.get_default_device()
+    if device.type == 'mps' and t_mps_default_stream:
+        return t_mps_default_stream(device)
+    return None
 
 
 def apply_patches() -> None:
     """Apply MPS stream patches."""
     log_info("Applying MPS stream patches")
+    
+    # Only patch if MPS exists and has stream support
+    if hasattr(torch, 'mps'):
+        if hasattr(torch.mps, 'current_stream'):
+            torch.mps.current_stream = current_stream
+        if hasattr(torch.mps, 'default_stream'):
+            torch.mps.default_stream = default_stream
+    
+    log_info("MPS stream patches applied")
 
+# Module initialization
+log_info("Initializing TorchDevice MPS streams module")
 
-__all__: List[str] = [
-    'MPSEvent',
+__all__: list[str] = [
+    'current_stream',
+    'default_stream',
     'apply_patches'
 ]
+
+log_info("TorchDevice MPS streams module initialized")

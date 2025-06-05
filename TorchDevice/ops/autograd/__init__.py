@@ -1,16 +1,26 @@
 """
-TorchDevice Autograd Module
-----------------------
-Automatic differentiation functionality.
+TorchDevice Autograd Operations Module
+--------------------------------
+Automatic differentiation operations.
 """
 
-from . import (
-    function,
-    variable,
-    grad_mode
-)
+from TorchDevice.core.logger import log_info
+from . import function, variable, grad_mode
 
-print("Importing TorchDevice/ops/autograd/__init__.py")
+log_info("Initializing TorchDevice autograd module")
+
+
+def apply_patches() -> None:
+    """Apply all autograd operation patches."""
+    log_info("Applying autograd operation patches")
+    
+    # Apply patches from each submodule
+    function.apply_patches()
+    variable.apply_patches()
+    grad_mode.apply_patches()
+    
+    log_info("Autograd operation patches applied")
+
 
 __all__: list[str] = [
     'function',
@@ -19,13 +29,4 @@ __all__: list[str] = [
     'apply_patches'
 ]
 
-
-def apply_patches() -> None:
-    """Apply autograd-related patches."""
-    print("Applying autograd patches")
-    function.apply_patches()
-    variable.apply_patches()
-    grad_mode.apply_patches()
-
-# Placeholder for autograd functionality
-
+log_info("TorchDevice autograd module initialized") 

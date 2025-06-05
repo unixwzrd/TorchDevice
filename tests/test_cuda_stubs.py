@@ -27,6 +27,11 @@ class TestCUDAStubs(PrefixedTestCase):
         self.device = torch.device('cuda' if self.has_cuda else 'mps' if self.has_mps else 'cpu')
         self.info("Using device: %s", self.device)
 
+        self.logger.info(f"TestCUDAStubs.setUp: torch.cuda.current_device ID: {id(torch.cuda.current_device)}")
+        self.logger.info(f"TestCUDAStubs.setUp: torch.cuda.device_count ID: {id(torch.cuda.device_count)}")
+        self.logger.info(f"TestCUDAStubs.setUp: torch.cuda.manual_seed_all ID: {id(torch.cuda.manual_seed_all)}")
+        self.logger.info("Finished TestCUDAStubs setUp.")
+
         # Get the default device through PyTorch's interface
         # TorchDevice will intercept this call and handle redirection
         self.default_device = torch.get_default_device()
