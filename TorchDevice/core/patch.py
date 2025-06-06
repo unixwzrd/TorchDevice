@@ -11,7 +11,9 @@ from typing import Callable, TypeVar, Any
 import torch
 
 from .logger import log_info, auto_log
-from . import device, tensors
+from . import device # Import device directly
+from . import tensors as core_tensors
+from . import modules as core_modules
 from .device import DeviceManager
 
 # Define tensor_creation_wrapper before importing ops modules to avoid circular imports
@@ -87,6 +89,25 @@ _utils_patched = False
 # Type variable for preserving function types
 T = TypeVar('T', bound=Callable[..., Any])
 
+_original_torch_creation_functions: dict[str, Callable] = {}
+
+# List of torch tensor creation functions to be wrapped.
+# These are top-level functions in the torch module that typically accept a 'device' kwarg.
+_TENSOR_CREATION_FUNCTIONS_TO_WRAP = [
+    'tensor', 'as_tensor',
+    'scalar_tensor',
+    'ones', 'zeros', 'empty', 'full', 'eye',
+    'ones_like', 'zeros_like', 'empty_like', 'full_like',
+    'arange', 'range', 'linspace', 'logspace', # range is torch.range, not python range
+    'rand', 'randn', 'randint',
+    'empty_strided',
+    # Complex tensors
+    'complex', 'polar',
+    # Sparse tensors (ensure wrapper handles their specific args if different)
+    # 'sparse_coo_tensor', 'sparse_csr_tensor', 'sparse_csc_tensor',
+    # 'sparse_bsr_tensor', 'sparse_bsc_tensor', 'sparse_compressed_tensor',
+    # '_sparse_coo_tensor_unsafe', '_sparse_csr_tensor_unsafe',
+]
 
 def _apply_core_patches() -> None:
     """Apply core functionality patches."""
@@ -95,11 +116,40 @@ def _apply_core_patches() -> None:
         log_info("Core patches already applied")
         return
 
-    log_info("Applying core patches")
+    log_info("Applying core patches...")
+    
+    # 1. Apply device patches (torch.device, torch.load)
+    log_info("  Applying device.apply_patches()...")
     device.apply_patches()
-    tensors.apply_patches()
+    
+    # 2. Apply tensor method patches (Tensor.to, Tensor.cuda, etc.)
+    log_info("  Applying core_tensors.apply_patches()...")
+    core_tensors.apply_patches()
+
+    # 3. Apply module method patches (Module.to, Module.cuda, etc.)
+    log_info("  Applying core_modules.apply_patches()...")
+    core_modules.apply_patches()
+    
+    # 4. Apply tensor creation function wrappers (torch.tensor, torch.ones, etc.)
+    log_info("  Applying tensor creation function wrappers...")
+    for func_name in _TENSOR_CREATION_FUNCTIONS_TO_WRAP:
+        if hasattr(torch, func_name):
+            original_func = getattr(torch, func_name)
+            if callable(original_func):
+                if func_name not in _original_torch_creation_functions:
+                    _original_torch_creation_functions[func_name] = original_func
+                
+                wrapped_func = tensor_creation_wrapper(original_func)
+                setattr(torch, func_name, wrapped_func)
+                # log_info(f"Patched torch.{func_name}") # Can be verbose, enable if needed
+            else:
+                log_info(f"Skipping torch.{func_name} as it's not callable.")
+        else:
+            log_info(f"Skipping torch.{func_name} as it does not exist.")
+    log_info("  Tensor creation function wrappers applied.")
+
     _core_patched = True
-    log_info("Core patches applied")
+    log_info("Core patches application complete.")
 
 
 def _apply_ops_patches() -> None:

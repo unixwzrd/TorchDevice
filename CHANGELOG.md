@@ -32,6 +32,13 @@
 - Centralized `torch.cuda` RNG (Random Number Generation) patching logic into `TorchDevice/ops/random/generators.py`.
 - Refactored `TorchDevice/ops/random/generators.py` to use `DeviceManager` and `hardware_info` for robust, device-aware RNG patching across `torch`, `torch.cuda`, and `torch.mps` namespaces.
 
+  - **Core Patching Refinement**:
+    - Further modularized core patching logic within `TorchDevice/core/`:
+      - `device.py`: Confirmed `DeviceManager` handles `torch.device` and `torch.load` patching.
+      - `tensors.py`: Streamlined for `torch.Tensor` method patching and tensor creation wrappers.
+      - `modules.py`: Introduced for dedicated `torch.nn.Module` method patching.
+      - `patch.py`: Updated to orchestrate the refined patching sequence from these modules.
+
 ### Removed
 
 - Redundant patch implementations
