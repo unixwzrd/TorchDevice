@@ -1,9 +1,9 @@
 # CHANGELOG
 
-
 ## [Unreleased]
 
 ### Added
+
 - Complete project restructuring with new modular architecture
   - New `core/` module for central device handling
   - New `ops/` module for operation-specific implementations
@@ -16,18 +16,24 @@
   - Enhanced stream management
 
 ### Changed
+
 - Reorganized existing code into logical modules
 - Updated import paths to reflect new structure
 - Consolidated patch functionality into core module
 - Improved separation of concerns between modules
+- Centralized `torch.cuda` RNG (Random Number Generation) patching logic into `TorchDevice/ops/random/generators.py`.
+- Refactored `TorchDevice/ops/random/generators.py` to use `DeviceManager` and `hardware_info` for robust, device-aware RNG patching across `torch`, `torch.cuda`, and `torch.mps` namespaces.
 
 ### Removed
+
 - Redundant patch implementations
 - Deprecated compile-related files
+- Removed redundant RNG stubs and patching logic from `TorchDevice/ops/device/cuda.py` as this is now fully handled by `ops/random/generators.py`.
 
 ## 2025-05-26 - 0.4.0 - Transformer Support and Attention Mechanisms
 
 ### Major Changes
+
 - **Comprehensive Transformer Support**
   - Added full support for transformer model operations
   - Implemented scaled dot-product attention mechanism
@@ -60,18 +66,21 @@
   - Enhanced device compatibility test coverage
 
 ### Breaking Changes
+
 - Attention mechanisms now enforce stricter type checking
 - Some attention operations may require explicit device specifications
 - Neural network operations require proper dtype specifications
 - Device handling follows stricter validation rules
 
 ### Known Issues
+
 - Some specialized CUDA attention operations may not have direct MPS equivalents
 - Performance implications when using attention mechanisms on CPU fallback
 - Certain CUDA-specific optimizations may not be available on MPS
 - Some transformer operations may require additional memory on MPS devices
 
 ### Next Steps
+
 - Optimization of attention operations for different hardware
 - Support for more transformer architectures
 - Enhanced memory management for large models
@@ -80,7 +89,9 @@
 - Enhanced error reporting and diagnostics
 
 ### Testing Notes
+
 We need testers to validate the following scenarios:
+
 1. Large transformer model inference
 2. Multi-head attention performance
 3. Mixed-precision training with attention
@@ -93,15 +104,17 @@ We need testers to validate the following scenarios:
 Please report any issues or unexpected behavior through the issue tracker.
 
 ### Package Updates
+
 - Version updated to 0.4.0 in all relevant files
 - Added transformers>=4.30.0 as a dependency
 - Updated package classifiers to reflect beta status
 - Enhanced package discovery with find_packages()
-- Added new module exports in __init__.py
+- Added new module exports in **init**.py
 
 ## 2025-05-24 - 0.2.0 - Neural Network Operations and Device Handling Overhaul
 
 ### Major Changes
+
 - **Complete Neural Network Operations Refactoring**
   - Centralized all neural network operations in dedicated `device/nn.py` module
   - Added comprehensive type safety and device compatibility checks
@@ -128,22 +141,27 @@ Please report any issues or unexpected behavior through the issue tracker.
   - Added transformer model integration tests
 
 ### Breaking Changes
+
 - Neural network operations now enforce stricter type checking
 - Device handling may require explicit dtype specifications in some cases
 - Embedding operations now handle normalization differently
 
 ### Known Issues
+
 - Some CUDA-specific operations may not have full MPS equivalents
 - Performance implications when falling back to CPU for unsupported operations
 
 ### Next Steps
+
 - Implementation of attention mechanisms
 - Support for more neural network operations
 - Enhanced error handling and diagnostics
 - Performance optimizations for device-specific operations
 
 ### Testing Notes
+
 We need testers to validate the following scenarios:
+
 1. Transformer model inference on MPS devices
 2. Large-scale embedding operations
 3. Mixed-precision training workflows
@@ -154,6 +172,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 ## 2025-03-16 - 0.1.1
 
 ### Interim Checkpoint Release
+
 - **Modularization Complete:** All core logic is now modularized into dedicated modules under `TorchDevice/cuda/`.
 - **CPU Override Feature Stable:** The `cpu:-1` override is fully implemented, documented, and tested.
 - **All Core Tests Passing:** All unit and integration tests for the modularized codebase are passing as of this release.
@@ -163,6 +182,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 ## 2025-03-15 - 0.0.5
 
 ### CPU Override Feature
+
 - **Explicit CPU Device Selection**
   - Added new `cpu:-1` device specification to force CPU usage regardless of available accelerators
   - Implemented CPU override flag to ensure all subsequent operations respect explicit CPU selection
@@ -187,6 +207,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 ## 2025-03-10 - 0.0.4
 
 ### TDLogger Improvements
+
 - **Consolidated Duplicate Code**
   - Added new helper functions to centralize common operations:
     - `contains_important_message()` - Checks if a message contains important patterns that should always be logged
@@ -213,6 +234,7 @@ Please report any issues or unexpected behavior through the issue tracker.
   - Enhanced error handling in test utilities
 
 ### Test Infrastructure Improvements
+
 - **Created Common Test Utilities Directory**
   - Added `tests/common/` directory to house shared test infrastructure
   - Implemented `test_utils.py` with the `PrefixedTestCase` class providing standardized logging capabilities
@@ -223,6 +245,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 ## 2025-03-08 - 0.0.3
 
 ### Logger Improvements
+
 - Optimized the `_logged_messages` collection by replacing the set with a fixed-size deque
 - This change improves memory management by automatically removing oldest entries when the collection is full
 - Eliminates the need to clear the entire collection, providing more consistent duplicate prevention
@@ -235,6 +258,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 - Enhanced message filtering to ensure important redirection messages are always logged
 
 ### Test Framework Improvements
+
 - Created a robust test framework with a `PrefixedTestCase` class in `test_utils.py`
 - Fixed test discovery and execution to ensure consistent environment variables
 - Improved logging during tests with better context and error handling
@@ -244,6 +268,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 ## 2025-03-03 - 0.0.2
 
 ### Logging System Improvements
+
 - Modularized logging: Moved logging functionality into its own module (`TDLogger.py`)
 - Simplified logging interface:
   - Removed verbosity levels (LOG_VERBOSITY) in favor of a simpler on/off approach

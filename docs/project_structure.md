@@ -77,9 +77,9 @@ TorchDevice/
   - Weight initialization
 
 - **random/**: Random number generation
-  - RNG implementations
+  - Comprehensive RNG implementations and patching for `torch`, `torch.cuda`, and `torch.mps`. Manages all aspects of seed setting, and RNG state get/set operations, ensuring consistent behavior across different hardware and PyTorch build configurations.
   - Probability distributions
-  - Device-specific random operations
+  - Utilities for device-specific random operations, leveraging the centralized patching mechanism.
 
 - **streams/**: Stream handling
   - CUDA stream operations

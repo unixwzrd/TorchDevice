@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import unittest
+import sys
 import numpy as np
 
 import torch
@@ -549,4 +550,4 @@ class TestTorchDevice(PrefixedTestCase):
             self.assertEqual(torch.cuda.current_device(), -1)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

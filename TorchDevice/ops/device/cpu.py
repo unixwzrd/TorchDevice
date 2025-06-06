@@ -6,6 +6,7 @@ CPU-specific operations and patches.
 
 import torch
 from TorchDevice.core.logger import log_info, auto_log
+import TorchDevice.core.tensors # Import the module for dynamic access
 # Tensor movement functions are now in core.tensors
 
 # Store original functions
@@ -23,7 +24,7 @@ def numpy_replacement(tensor):
     # Always move to CPU for numpy conversion - this is a special case
     # that must bypass the device redirection policy
     if tensor.device.type != 'cpu':
-        cpu_tensor = tensor.to('cpu')
+        cpu_tensor = TorchDevice.core.tensors.t_Tensor_to(tensor, 'cpu') # Use original .to for numpy()
         return t_Tensor_numpy(cpu_tensor)
     return t_Tensor_numpy(tensor)
 

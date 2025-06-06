@@ -10,9 +10,8 @@ import functools # Added functools for @functools.wraps
 from typing import Callable, Any, List, Optional
 
 from TorchDevice.core.logger import auto_log, log_info # Use actual logger
-from TorchDevice.core.device import DeviceManager    # Use actual DeviceManager
-from TorchDevice.core.patch import tensor_creation_wrapper # Use centralized wrapper
-import TorchDevice.ops.device.cuda as cuda_device_ops # ADDED IMPORT
+from TorchDevice.core.device import DeviceManager, hardware_info    # Use actual DeviceManager
+from TorchDevice.core.patch import tensor_creation_wrapper
 
 # Store original functions before patching - these should only be used internally
 t_manual_seed = torch.manual_seed
@@ -213,163 +212,97 @@ def apply_patches() -> None:
     
     if hasattr(torch, "cuda"):
         log_info("TorchDevice ops.random.generators: torch.cuda found. Patching torch.cuda RNG functions.")
+
+        # Helper to determine CUDA operation mode
+        def get_cuda_rng_op_mode():
+            is_cuda_hw_available = hardware_info.is_native_cuda_available()
         
-        def cuda_manual_seed(seed_val: int) -> None:
-            log_info(f"TorchDevice ops.random.generators.cuda_manual_seed: Called with {seed_val=}.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Seeding CPU (via t_manual_seed).")
-                t_manual_seed(seed_val)  # Original torch.manual_seed from this module
-                cuda_device_ops._universal_lazy_init_replacement()
-            elif _original_cuda_manual_seed: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.manual_seed.")
-                _original_cuda_manual_seed(seed_val)
-            else:
-                log_info(f"  CUDA compiled but no original torch.cuda.manual_seed captured. Seeding CPU as fallback.")
-                t_manual_seed(seed_val)
-        torch.cuda.manual_seed = cuda_manual_seed
+        effective_cuda_target_device_obj = DeviceManager.torch_device_replacement("cuda")
+        effective_cuda_target_type = effective_cuda_target_device_obj.type
+        
+        log_info(f"  Effective target for 'torch.cuda.*' RNG calls is '{effective_cuda_target_type}'.")
 
-        def cuda_manual_seed_all(seed_val: int) -> None:
-            log_info(f"TorchDevice ops.random.generators.cuda_manual_seed_all: Called with {seed_val=}.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Seeding CPU and MPS (if available) as fallback for cuda_manual_seed_all.")
-                # Seed CPU directly using the captured default_generator
-                if default_generator is not None:
-                    log_info("Seeding CPU generator directly using captured torch.default_generator.manual_seed for cuda_manual_seed_all.")
-                    default_generator.manual_seed(seed_val)
-                else:
-                    log_info("torch.default_generator not captured, cannot seed CPU generator directly for cuda_manual_seed_all.")
+        if effective_cuda_target_type != "cuda":
+            log_info(f"  Redirecting torch.cuda.* RNG functions to target '{effective_cuda_target_type}'.")
 
-                # Seed MPS if available, using the captured original_torch_mps_manual_seed
-                if torch.backends.mps.is_available(): # Check for MPS availability
-                    if original_torch_mps_manual_seed is not None:
-                        log_info("MPS is available, calling captured original_torch_mps_manual_seed for cuda_manual_seed_all.")
-                        try:
-                            original_torch_mps_manual_seed(seed_val)
-                        except Exception as e:
-                            log_info("Error calling captured original_torch_mps_manual_seed for cuda_manual_seed_all: %s", e)
-                    else:
-                        log_info("original_torch_mps_manual_seed not captured, cannot seed MPS for cuda_manual_seed_all.")
-                else:
-                    log_info("MPS not available, skipping MPS seeding for cuda_manual_seed_all.")
-            elif _original_cuda_manual_seed_all: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.manual_seed_all.")
-                _original_cuda_manual_seed_all(seed_val)
-            else:
-                log_info(f"  CUDA compiled but no original torch.cuda.manual_seed_all captured. Seeding CPU/MPS as fallback.")
-                t_manual_seed(seed_val)
-                if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
-                    torch.mps.manual_seed(seed_val)
-        torch.cuda.manual_seed_all = cuda_manual_seed_all
+            # Patch torch.cuda.manual_seed
+            if hasattr(torch.cuda, 'manual_seed'):
+                if effective_cuda_target_type == "mps":
+                    target_func = original_torch_mps_manual_seed if original_torch_mps_manual_seed else (torch.mps.manual_seed if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed") else t_manual_seed)
+                    log_info(f"    Patching torch.cuda.manual_seed -> {target_func.__name__ if hasattr(target_func, '__name__') else 'torch.mps.manual_seed or t_manual_seed'}")
+                    torch.cuda.manual_seed = target_func
+                elif effective_cuda_target_type == "cpu":
+                    log_info("    Patching torch.cuda.manual_seed -> t_manual_seed (original torch.manual_seed)")
+                    torch.cuda.manual_seed = t_manual_seed
 
-        def cuda_seed() -> int:
-            log_info(f"TorchDevice ops.random.generators.cuda_seed: Called.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Seeding CPU/MPS (via t_seed).")
-                s = t_seed() # Original torch.seed() from this module
-                if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
-                    torch.mps.manual_seed(s)
-                cuda_device_ops._universal_lazy_init_replacement()
+            # Patch torch.cuda.manual_seed_all
+            if hasattr(torch.cuda, 'manual_seed_all'):
+                if effective_cuda_target_type == "mps":
+                    @functools.wraps(_original_cuda_manual_seed_all if _original_cuda_manual_seed_all else lambda s: None)
+                    def _mps_plus_cpu_seed_all_for_cuda(seed_val: int) -> None:
+                        log_info(f"    torch.cuda.manual_seed_all (redirected to MPS+CPU via wrapper): seeding with {seed_val}")
+                        mps_seed_func = original_torch_mps_manual_seed if original_torch_mps_manual_seed else (torch.mps.manual_seed if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed") else None)
+                        if mps_seed_func: mps_seed_func(seed_val)
+                        torch.default_generator.manual_seed(seed_val) # Seed CPU part directly
+                    log_info("    Patching torch.cuda.manual_seed_all -> custom MPS+CPU wrapper")
+                    torch.cuda.manual_seed_all = _mps_plus_cpu_seed_all_for_cuda
+                elif effective_cuda_target_type == "cpu":
+                    log_info("    Patching torch.cuda.manual_seed_all -> t_manual_seed_all (original torch.manual_seed_all)")
+                    torch.cuda.manual_seed_all = t_manual_seed_all
+
+            # Patch torch.cuda.seed
+            if hasattr(torch.cuda, 'seed'):
+                if effective_cuda_target_type == "mps":
+                    target_func = (torch.mps.seed if hasattr(torch, "mps") and hasattr(torch.mps, "seed") and callable(torch.mps.seed) else t_seed)
+                    log_info(f"    Patching torch.cuda.seed -> {target_func.__name__ if hasattr(target_func, '__name__') else 'torch.mps.seed or t_seed'}")
+                    torch.cuda.seed = target_func
+                elif effective_cuda_target_type == "cpu":
+                    log_info("    Patching torch.cuda.seed -> t_seed (original torch.seed)")
+                    torch.cuda.seed = t_seed
+            # Patch torch.cuda.set_rng_state_all
+            if hasattr(torch.cuda, 'set_rng_state_all'):
+                @functools.wraps(_original_cuda_set_rng_state_all if _original_cuda_set_rng_state_all else lambda s: None)
+                def _cuda_set_rng_state_all_replacement(states_val: Any) -> None:
+                    log_info(f"TorchDevice ops.random.generators._cuda_set_rng_state_all_replacement: Called, effective_cuda_target_type={effective_cuda_target_type}.")
+                    if effective_cuda_target_type == "cuda" and _original_cuda_set_rng_state_all:
+                        log_info("  Delegating to original torch.cuda.set_rng_state_all.")
+                        _original_cuda_set_rng_state_all(states_val)
+                    elif effective_cuda_target_type == "mps":
+                        log_info("  Redirecting to MPS-like set_rng_state_all behavior (CPU + MPS states).")
+                        if states_val: # states_val is expected to be a list/tuple [cpu_state, mps_state]
+                            if len(states_val) > 0:
+                                t_set_rng_state(states_val[0]) # Set CPU state from first element
+                            if len(states_val) > 1 and hardware_info.is_mps_available(check_pytorch=False) and original_torch_mps_set_rng_state:
+                                try:
+                                    original_torch_mps_set_rng_state(states_val[1]) # Set MPS state from second
+                                except Exception as e:
+                                    log_info(f"  Could not set MPS state for set_rng_state_all: {e}")
+                            elif len(states_val) > 1 and not (hardware_info.is_mps_available(check_pytorch=False) and original_torch_mps_set_rng_state):
+                                log_info("  MPS state provided for set_rng_state_all, but MPS is not available/configured for RNG.")
+                    elif effective_cuda_target_type == "cpu":
+                        log_info("  Redirecting to CPU-only set_rng_state_all behavior.")
+                        if states_val and len(states_val) > 0:
+                            t_set_rng_state(states_val[0]) # Set CPU state
+                        else:
+                            log_info("  No states provided to set_rng_state_all for CPU target.")
+                torch.cuda.set_rng_state_all = _cuda_set_rng_state_all_replacement
+
+        if hasattr(torch.cuda, "initial_seed"): # Check if original attr exists
+            def _cuda_initial_seed_replacement() -> int:
+                op_mode = get_cuda_rng_op_mode()
+                log_info(f"TorchDevice ops.random.generators._cuda_initial_seed_replacement: Called, op_mode={op_mode}.")
+                s: int = 0
+                if op_mode == "passthrough" and _original_cuda_initial_seed:
+                    log_info("  Delegating to original torch.cuda.initial_seed.")
+                    s = _original_cuda_initial_seed()
+                elif op_mode == "redirect_mps":
+                    log_info("  Redirecting to MPS initial_seed behavior (via global initial_seed).")
+                    s = initial_seed() # our top-level one
+                else: # stub_cpu_mps
+                    log_info("  Stubbing for CPU/MPS: using global initial_seed.")
+                    s = initial_seed()
                 return s
-            elif _original_cuda_seed: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.seed.")
-                return _original_cuda_seed()
-            else:
-                log_info(f"  CUDA compiled but no original torch.cuda.seed captured. Seeding CPU/MPS as fallback.")
-                s = t_seed()
-                if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
-                    torch.mps.manual_seed(s)
-                return s
-        torch.cuda.seed = cuda_seed
-
-        def cuda_seed_all() -> int:
-            log_info(f"TorchDevice ops.random.generators.cuda_seed_all: Called.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Seeding CPU/MPS (via t_seed for all).")
-                s = t_seed() # Original torch.seed() from this module
-                if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
-                    torch.mps.manual_seed(s)
-                cuda_device_ops._universal_lazy_init_replacement()
-                return s
-            elif _original_cuda_seed_all: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.seed_all.")
-                return _original_cuda_seed_all()
-            else:
-                log_info(f"  CUDA compiled but no original torch.cuda.seed_all captured. Seeding CPU/MPS as fallback.")
-                s = t_seed()
-                if hasattr(torch, "mps") and hasattr(torch.mps, "manual_seed"):
-                    torch.mps.manual_seed(s)
-                return s
-        torch.cuda.seed_all = cuda_seed_all
-
-        def cuda_get_rng_state(device: Optional[Any]=None) -> torch.Tensor:
-            log_info(f"TorchDevice ops.random.generators.cuda_get_rng_state: Called with {device=}.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Getting CPU RNG state (via t_get_rng_state).")
-                return t_get_rng_state() # Original torch.get_rng_state() from this module
-            elif _original_cuda_get_rng_state: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.get_rng_state.")
-                return _original_cuda_get_rng_state(device) 
-            else:
-                log_info(f"  CUDA compiled but no original torch.cuda.get_rng_state captured. Getting CPU RNG state as fallback.")
-                return t_get_rng_state()
-        torch.cuda.get_rng_state = cuda_get_rng_state
-
-        def cuda_set_rng_state(state_val: torch.Tensor, device: Optional[Any]=None) -> None:
-            log_info(f"TorchDevice ops.random.generators.cuda_set_rng_state: Called with {device=}.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Setting CPU RNG state (via t_set_rng_state).")
-                t_set_rng_state(state_val) # Original torch.set_rng_state() from this module
-            elif _original_cuda_set_rng_state: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.set_rng_state.")
-                _original_cuda_set_rng_state(state_val, device)
-            else:
-                log_info(f"  CUDA compiled but no original torch.cuda.set_rng_state captured. Setting CPU RNG state as fallback.")
-                t_set_rng_state(state_val)
-        torch.cuda.set_rng_state = cuda_set_rng_state
-
-        def cuda_get_rng_state_all() -> List[torch.Tensor]:
-            log_info(f"TorchDevice ops.random.generators.cuda_get_rng_state_all: Called.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Returning list with CPU RNG state.")
-                states = [t_get_rng_state()] # CPU state from this module
-                return states
-            elif _original_cuda_get_rng_state_all: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.get_rng_state_all.")
-                return _original_cuda_get_rng_state_all()
-            else: 
-                log_info(f"  CUDA compiled but no original torch.cuda.get_rng_state_all captured. Returning CPU RNG state list as fallback.")
-                return [t_get_rng_state()]
-        torch.cuda.get_rng_state_all = cuda_get_rng_state_all
-
-        def cuda_set_rng_state_all(states_val: List[torch.Tensor]) -> None:
-            log_info(f"TorchDevice ops.random.generators.cuda_set_rng_state_all: Called.")
-            if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                log_info(f"  CUDA not compiled. Setting CPU RNG state from first state in list.")
-                if states_val:
-                    t_set_rng_state(states_val[0]) # Set CPU state from this module
-            elif _original_cuda_set_rng_state_all: # Use locally captured original
-                log_info(f"  CUDA compiled. Delegating to original torch.cuda.set_rng_state_all.")
-                _original_cuda_set_rng_state_all(states_val)
-            else: 
-                log_info(f"  CUDA compiled but no original torch.cuda.set_rng_state_all captured. Setting CPU RNG state as fallback.")
-                if states_val:
-                    t_set_rng_state(states_val[0])
-        torch.cuda.set_rng_state_all = cuda_set_rng_state_all
-
-        if hasattr(torch.cuda, "initial_seed"):
-            log_info(f"TorchDevice ops.random.generators: Patching torch.cuda.initial_seed")
-            def cuda_initial_seed() -> int:
-                log_info(f"TorchDevice ops.random.generators.cuda_initial_seed: Called.")
-                if not cuda_device_ops.__is_torch_actually_compiled_with_cuda_value:
-                    log_info(f"  CUDA not compiled. Returning CPU initial seed (via t_initial_seed).")
-                    return t_initial_seed() if t_initial_seed else 0 # t_initial_seed from this module
-                elif _original_cuda_initial_seed: # Use locally captured original
-                    log_info(f"  CUDA compiled. Delegating to original torch.cuda.initial_seed.")
-                    return _original_cuda_initial_seed()
-                else:
-                    log_info(f"  CUDA compiled but no original torch.cuda.initial_seed captured. Returning CPU initial seed as fallback.")
-                    return t_initial_seed() if t_initial_seed else 0
-            torch.cuda.initial_seed = cuda_initial_seed
+            torch.cuda.initial_seed = _cuda_initial_seed_replacement
     log_info("TorchDevice ops.random.generators: apply_patches complete.")
 
 __all__ = [

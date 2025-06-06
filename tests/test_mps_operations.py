@@ -4,6 +4,7 @@ Test file for MPS device operations with TorchDevice.
 This ensures that all operations work correctly on MPS.
 """
 import unittest
+import sys
 import torch
 from pathlib import Path
 
@@ -151,4 +152,4 @@ class TestMPSOperations(PrefixedTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

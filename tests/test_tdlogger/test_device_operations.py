@@ -5,6 +5,7 @@ This module tests various device operations with TorchDevice,
 ensuring that the correct log messages are generated.
 """
 import unittest
+import sys
 from pathlib import Path
 
 import torch
@@ -171,4 +172,4 @@ class TestDeviceOperations(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

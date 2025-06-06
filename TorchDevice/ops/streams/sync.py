@@ -5,12 +5,24 @@ Stream synchronization and event management.
 """
 
 import torch
-from typing import Optional
+from typing import Optional, Any
 from TorchDevice.core.logger import log_info, auto_log
+from TorchDevice.core.device import DeviceManager
 
 # Store original functions
 t_cuda_synchronize = torch.cuda.synchronize if hasattr(torch.cuda, 'synchronize') else None
 t_mps_synchronize = torch.mps.synchronize if hasattr(torch.mps, 'synchronize') else None
+
+
+@auto_log()
+def t_cuda_synchronize_function(device: Optional[Any] = None) -> None:
+    """Replacement for torch.cuda.synchronize, handles MPS/CPU redirection."""
+    device_type = torch.device(DeviceManager.torch_device_replacement(device)).type if device is not None else DeviceManager.get_default_device().type
+    if device_type == 'mps' and hasattr(torch, 'mps') and hasattr(torch.mps, 'synchronize'):
+        torch.mps.synchronize()
+    # For CPU or other types (including actual CUDA if not redirected), this is a no-op,
+    # as the original function would have been called if it were a true CUDA context,
+    # or PyTorch handles the no-op for CPU.
 
 
 @auto_log()
@@ -30,7 +42,7 @@ def apply_patches() -> None:
     
     # Patch synchronize functions
     if hasattr(torch.cuda, 'synchronize'):
-        torch.cuda.synchronize = synchronize
+        torch.cuda.synchronize = t_cuda_synchronize_function # Use the new function for CUDA sync
     if hasattr(torch.mps, 'synchronize'):
         torch.mps.synchronize = synchronize
     
@@ -41,6 +53,7 @@ log_info("Initializing TorchDevice stream synchronization module")
 
 __all__: list[str] = [
     'synchronize',
+    't_cuda_synchronize_function',
     'apply_patches'
 ]
 

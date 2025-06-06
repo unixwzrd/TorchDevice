@@ -9,10 +9,19 @@ from . import cuda, mps, cpu
 
 log_info("Initializing TorchDevice device operations module")
 
+def apply_patches() -> None:
+    """Apply all device operation patches."""
+    log_info("Applying device operation patches")
+    cuda.apply_patches()
+    mps.apply_patches()
+    cpu.apply_patches()
+    log_info("Device operation patches applied")
+
 __all__: list[str] = [
     'cuda',
     'mps',
-    'cpu'
+    'cpu',
+    'apply_patches' # Added apply_patches
 ]
 
-log_info("TorchDevice device operations module initialized") 
+log_info("TorchDevice device operations module initialized")

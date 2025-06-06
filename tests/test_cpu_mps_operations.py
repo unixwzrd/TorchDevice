@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import unittest
+import sys
 from pathlib import Path
 import torch
 import TorchDevice
@@ -298,4 +299,4 @@ class TestMPSOperations(PrefixedTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

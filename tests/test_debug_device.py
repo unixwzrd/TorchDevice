@@ -59,4 +59,4 @@ class TestDeviceManager(unittest.TestCase):
             print(f"After reset - Requested 'mps', got: {device_mps_after}")
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

@@ -8,6 +8,7 @@ This module verifies:
 3. Tensor creation with various device specifications works as expected
 """
 import unittest
+import sys
 import torch
 import TorchDevice
 
@@ -196,4 +197,4 @@ class TorchDeviceBehaviorTest(PrefixedTestCase):
         torch.device('cpu:-1')
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])

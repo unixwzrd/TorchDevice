@@ -103,35 +103,18 @@ def _apply_core_patches() -> None:
 
 
 def _apply_ops_patches() -> None:
-    """Apply operation-specific patches."""
+    """Apply operation-specific patches by calling the central apply_patches of the ops package."""
     global _ops_patched
     if _ops_patched:
         log_info("Operation patches already applied")
         return
 
-    log_info("Applying operation patches")
-    # Order matters here - device patches should be applied first,
-    # followed by random before memory
-    
-    # Apply device-specific patches (CUDA/MPS)
-    from TorchDevice.ops.device import cuda
-    log_info("Applying CUDA device patches")
-    cuda.apply_patches()
-    
-    log_info("Applying random patches")
-    random.apply_patches()
-    log_info("Applying memory patches")
-    memory.apply_patches()
-    log_info("Applying neural network patches")
-    nn.apply_patches()
-    log_info("Applying stream patches")
-    streams.apply_patches()
-    log_info("Applying event patches")
-    events.apply_patches()
-    log_info("Applying autograd patches")
-    autograd.apply_patches()
+    # Import ops package here to ensure it's fully initialized before calling its apply_patches
+    from TorchDevice import ops 
+    log_info("Applying all operation package patches via ops.apply_patches()")
+    ops.apply_patches() # Call the apply_patches from TorchDevice/ops/__init__.py
     _ops_patched = True
-    log_info("Operation patches applied")
+    log_info("All operation package patches applied")
 
 
 def _apply_utils_patches() -> None:

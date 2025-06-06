@@ -146,12 +146,6 @@ def cuda_is_available_replacement():
     return True
 
 @auto_log()
-def cuda_synchronize_replacement(device=None):
-    """No-op synchronize replacement that doesn't fail on non-CUDA devices."""
-    # Do nothing but don't fail
-    pass
-
-@auto_log()
 def cuda_set_device_replacement(device):
     """Set device replacement that doesn't fail on non-CUDA devices."""
     # Log but don't actually try to set CUDA device on non-CUDA hardware
@@ -213,9 +207,25 @@ def cuda_max_memory_reserved_replacement(device=None):
 
 @auto_log()
 def cuda_memory_stats_replacement(device=None):
-    """Simulated torch.cuda.memory_stats()."""
-    log_info(f"Simulated torch.cuda.memory_stats(device={device}) called. Returning empty dict.")
-    return {}
+    """Simulated torch.cuda.memory_stats(). Returns a dict with common keys and zero values."""
+    log_info(f"Simulated torch.cuda.memory_stats(device={device}) called. Returning placeholder stats.")
+    # Return a dictionary with common keys expected by tests, with 0 values
+    # Based on torch.cuda.memory_stats() output structure
+    return {
+        'active.all.current': 0,
+        'active.all.peak': 0,
+        'active_bytes.all.current': 0,
+        'active_bytes.all.peak': 0,
+        'allocated_bytes.all.current': 0,
+        'allocated_bytes.all.peak': 0,
+        'inactive_split.all.current': 0,
+        'inactive_split.all.peak': 0,
+        'inactive_split_bytes.all.current': 0,
+        'inactive_split_bytes.all.peak': 0,
+        'reserved_bytes.all.current': 0,
+        'reserved_bytes.all.peak': 0,
+        # Add other common keys if tests require them
+    }
 
 _cuda_module_ref = sys.modules.get('torch.cuda')
 _backends_cuda_module_ref = sys.modules.get('torch.backends.cuda')
@@ -351,11 +361,7 @@ def apply_patches():
 
         # Define stubs as local functions to get stable IDs for logging
         def _stub_current_device_non_cuda(): return 0
-        def _stub_device_count_non_cuda(): return 1 if hardware_info.is_mps_available() else 0
-        def _stub_manual_seed_all_non_cuda(*args, **kwargs): return None
-        def _stub_seed_all_non_cuda(*args, **kwargs): return None
-        def _stub_manual_seed_non_cuda(*args, **kwargs): return None
-        def _stub_seed_non_cuda(*args, **kwargs): return None
+        def _stub_device_count_non_cuda(): return 1 if hardware_info.is_native_mps_available() else 0
 
         stubs_for_non_cuda_build = {
             # Submodules (create as mock modules)
@@ -365,6 +371,11 @@ def apply_patches():
             'comm': types.ModuleType('torch.cuda.comm'),
             # Classes (create as mock classes)
             'CUDAGraph': type('CUDAGraph', (object,), {'__init__': lambda self, *a, **kw: None}),
+            'device': type('device', (object,), { # Stub for torch.cuda.device context manager
+                '__init__': lambda self, idx: None,
+                '__enter__': lambda self: None,
+                '__exit__': lambda self, *args: None
+            }),
             # Functions with specific return values for non-CUDA based on test_cuda_stubs.py
             'set_stream': lambda *a, **kw: None,
             'mem_get_info': lambda *a, **kw: (0, 0), # test expects tuple or None
@@ -389,23 +400,13 @@ def apply_patches():
             'set_sync_debug_mode': lambda *a, **kw: None,
             'get_sync_debug_mode': lambda *a, **kw: 0,
             'list_gpu_processes': lambda *a, **kw: [],
-            'seed': _stub_seed_non_cuda,
-            'seed_all': _stub_seed_all_non_cuda,
-            'manual_seed': _stub_manual_seed_non_cuda,
-            'manual_seed_all': _stub_manual_seed_all_non_cuda,
-            'get_rng_state': lambda *a, **kw: torch.ByteTensor(), # Test expects None
-            'get_rng_state_all': lambda *a, **kw: [], # Test expects None
-            'set_rng_state': lambda *a, **kw: None,
-            'set_rng_state_all': lambda *a, **kw: None,
-            'initial_seed': lambda *a, **kw: 0, # Test expects None
             # General device functions (some use existing _replacement stubs)
             'device_count': _stub_device_count_non_cuda,
             'current_device': _stub_current_device_non_cuda,
-            'get_device_name': lambda device=None: "MPS (Simulated by TorchDevice)" if hardware_info.is_mps_available() else "CUDA (Simulated by TorchDevice)",
+            'get_device_name': lambda device=None: "MPS (Simulated by TorchDevice)" if hardware_info.is_native_mps_available() else "CUDA (Simulated by TorchDevice)",
             'get_device_capability': lambda device=None: (1, 0), # Generic capability for MPS/CPU simulation
             'get_device_properties': cuda_get_device_properties_replacement,
             'set_device': cuda_set_device_replacement,
-            'synchronize': cuda_synchronize_replacement,
             'empty_cache': cuda_empty_cache_replacement,
             'memory_allocated': cuda_memory_allocated_replacement,
             'max_memory_allocated': cuda_max_memory_allocated_replacement,
@@ -413,13 +414,16 @@ def apply_patches():
             'memory_reserved': cuda_memory_reserved_replacement,
             'max_memory_reserved': cuda_max_memory_reserved_replacement,
             'memory_stats': cuda_memory_stats_replacement,
+            'memory_summary': lambda device=None, abbreviated=False: "Simulated memory summary (TorchDevice)\nMemory Allocated: 0 MiB\nMemory Reserved: 0 MiB\nTotal Capacity: 0 MiB", # Stub for memory_summary
             'memory_snapshot': lambda: [],
-            'get_arch_list': lambda: ['sm_70'] if hardware_info.is_mps_available() else [], # Simulate some arch for MPS
+            'get_arch_list': lambda: ['sm_70'] if hardware_info.is_native_mps_available() else [], # Simulate some arch for MPS
             # Stream and Event stubs (minimal, full patching by their modules)
             'Stream': type('Stream', (object,), {'__init__': lambda s, *a, **k: None, 'synchronize': lambda s: None, 'query': lambda s: True, 'record_event': lambda s, e=None: e if e else type('Event', (object,), {'record':lambda ev:None})(), 'wait_event': lambda s,e: None, 'wait_stream': lambda s,st: None, '__enter__': lambda s: s, '__exit__': lambda s,*a: None }),
             'Event': type('Event', (object,), {'__init__': lambda s, *a, **k: None, 'record': lambda s, st=None: None, 'synchronize': lambda s: None, 'query': lambda s: True, 'wait': lambda s, st=None: None, 'elapsed_time': lambda s,e: 0.0}),
             'current_stream': lambda device=None: None, # Test expects None
             'default_stream': lambda device=None: None, # Test expects None
+            'stream': lambda stream=None: stubs_for_non_cuda_build['Stream'](stream) if stream is not None else stubs_for_non_cuda_build['Stream'](), # Factory for Stream context manager
+            'ipc_collect': lambda: None, # Stub for ipc_collect
         }
 
         for name, stub_impl in stubs_for_non_cuda_build.items():
@@ -428,9 +432,6 @@ def apply_patches():
                 log_info(f"TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.current_device with ID: {id(stub_impl)} (local func ID: {id(_stub_current_device_non_cuda)})")
             elif name == 'device_count':
                 log_info(f"TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.device_count with ID: {id(stub_impl)} (local func ID: {id(_stub_device_count_non_cuda)})")
-            elif name == 'manual_seed_all':
-                log_info(f"TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.manual_seed_all with ID: {id(stub_impl)} (local func ID: {id(_stub_manual_seed_all_non_cuda)})")
-            # log_info(f"TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.{name} for non-CUDA build.")
 
         # AMP Stubs
         if not hasattr(_cuda_module_ref, 'amp') or not isinstance(getattr(_cuda_module_ref, 'amp'), types.ModuleType):
@@ -446,13 +447,12 @@ def apply_patches():
         # This section ensures that if PyTorch *has* the CUDA functions, they are appropriately no-oped or redirected.
         # Some stubs from the 'non_cuda_build' list might be useful here too if the original is problematic on MPS.
 
-        _cuda_module_ref.device_count = lambda: 1 if hardware_info.is_mps_available() else (t_cuda_device_count() if t_cuda_device_count else 0)
+        _cuda_module_ref.device_count = lambda: 1 if hardware_info.is_native_mps_available() else (t_cuda_device_count() if t_cuda_device_count else 0)
         _cuda_module_ref.current_device = t_cuda_current_device if t_cuda_current_device else (lambda: 0)
-        _cuda_module_ref.get_device_name = t_cuda_get_device_name if t_cuda_get_device_name else (lambda device=None: "MPS (Redirected by TorchDevice)" if hardware_info.is_mps_available() else "CUDA (Simulated by TorchDevice)")
-        _cuda_module_ref.get_device_capability = t_cuda_get_device_capability if t_cuda_get_device_capability else (lambda device=None: (1,0) if hardware_info.is_mps_available() else (7,0) )
+        _cuda_module_ref.get_device_name = t_cuda_get_device_name if t_cuda_get_device_name else (lambda device=None: "MPS (Redirected by TorchDevice)" if hardware_info.is_native_mps_available() else "CUDA (Simulated by TorchDevice)")
+        _cuda_module_ref.get_device_capability = t_cuda_get_device_capability if t_cuda_get_device_capability else (lambda device=None: (1,0) if hardware_info.is_native_mps_available() else (7,0) )
         _cuda_module_ref.get_device_properties = cuda_get_device_properties_replacement # Always use our simulation for consistency on non-CUDA
         _cuda_module_ref.set_device = cuda_set_device_replacement # No-op or redirects
-        _cuda_module_ref.synchronize = cuda_synchronize_replacement # Redirects to MPS or no-op
         
         _cuda_module_ref.empty_cache = cuda_empty_cache_replacement
         _cuda_module_ref.memory_allocated = cuda_memory_allocated_replacement
@@ -466,16 +466,6 @@ def apply_patches():
         _cuda_module_ref.get_arch_list = getattr(_cuda_module_ref, 'get_arch_list', lambda: ['sm_70'] if hardware_info.is_mps_available() else [])
         _cuda_module_ref.get_gencode_flags = getattr(_cuda_module_ref, 'get_gencode_flags', lambda: "")
 
-        # RNG functions - use originals if they exist and are safe, otherwise simple stubs or replacements.
-        # For now, let's assume the universal replacements or simple lambdas are safer if not on actual CUDA.
-        _cuda_module_ref.manual_seed = getattr(_cuda_module_ref, 'manual_seed', lambda seed: None)
-        _cuda_module_ref.manual_seed_all = getattr(_cuda_module_ref, 'manual_seed_all', lambda seed: None)
-        _cuda_module_ref.seed = getattr(_cuda_module_ref, 'seed', lambda: None) # test_cuda_stubs expects None
-        _cuda_module_ref.initial_seed = getattr(_cuda_module_ref, 'initial_seed', lambda: 0) # test_cuda_stubs expects 0
-        _cuda_module_ref.get_rng_state = getattr(_cuda_module_ref, 'get_rng_state', lambda device=None: torch.ByteTensor()) # test_cuda_stubs expects ByteTensor
-        _cuda_module_ref.get_rng_state_all = getattr(_cuda_module_ref, 'get_rng_state_all', lambda: []) # test_cuda_stubs expects list
-        _cuda_module_ref.set_rng_state = getattr(_cuda_module_ref, 'set_rng_state', lambda state, device=None: None)
-        _cuda_module_ref.set_rng_state_all = getattr(_cuda_module_ref, 'set_rng_state_all', lambda states: None)
 
         # AMP - ensure replacements are used if running on MPS/CPU
         if hasattr(_cuda_module_ref, 'amp') and isinstance(getattr(_cuda_module_ref, 'amp'), types.ModuleType):

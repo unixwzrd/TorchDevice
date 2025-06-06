@@ -25,11 +25,11 @@ This checklist outlines the steps for modularizing the TorchDevice codebase. Eac
 
 ## Phase 3: Random Number Generation
 
-- [ ] Random Operations (from TorchDevice.original/device/random.py)
-  - [ ] Move RNG state management to ops/random/generators.py
+- [x] Random Operations (from TorchDevice.original/device/random.py and ops/device/cuda.py)
+  - [x] Centralize RNG state management and patching for `torch`, `torch.cuda`, and `torch.mps` into ops/random/generators.py
   - [ ] Move distribution functions to ops/random/distributions.py
-  - [ ] Move seed management functions
-  - [ ] Move device-specific RNG operations
+  - [x] Consolidate seed management functions within ops/random/generators.py
+  - [x] Ensure all device-specific RNG operations (especially CUDA-related) are handled by ops/random/generators.py, removing stubs from ops/device/cuda.py
 
 ## Phase 4: Memory Management
 

@@ -1,117 +1,170 @@
 """
 TorchDevice CUDA Events Module
 -------------------------
-CUDA event management and operations.
+CUDA event management and operations. This module now contains the primary
+implementation for CUDA events, ported from the original TorchDevice.
 """
 
 import torch
-from typing import Optional, Any
+from typing import Optional, Any, Type # Added Type
+import time # Added time
+
 from TorchDevice.core.logger import log_info, auto_log
+from TorchDevice.core.device import DeviceManager # Added DeviceManager
 
-from TorchDevice.ops.events.mps_events import MockCudaEvent # Added import
+# --- Base Class Resolution Helper (from original streams.py) ---
+def _get_event_base() -> Type:
+    try:
+        from torch._streambase import _EventBase
+        return _EventBase
+    except (AttributeError, ImportError):
+        try:
+            from torch._C import _EventBase
+            return _EventBase
+        except (AttributeError, ImportError):
+            try:
+                return torch._C._EventBase # type: ignore
+            except (AttributeError, ImportError):
+                log_warning(
+                    "[TORCHDEVICE] torch._streambase._EventBase not found, using object as base class for Event. "
+                    "This may cause issues with PyTorch dynamo."
+                )
+                return object
 
-# Store original functions
-t_cuda_Event = torch.cuda.Event if hasattr(torch.cuda, 'Event') else None
-t_cuda_current_event = getattr(torch.cuda, 'current_event', None)
-t_cuda_synchronize = getattr(torch.cuda, 'synchronize', None) # Added original synchronize
+_EventBase: Type = _get_event_base()
 
+# --- t_cuda_Event Class Definition (from original streams.py) ---
+class t_cuda_Event(_EventBase): # type: ignore
+    """Replacement for torch.cuda.Event (MPS/CPU)."""
+    def __init__(self, enable_timing: bool = False, blocking: bool = False, interprocess: bool = False, device: Optional[Any] = None):
+        if _EventBase is not object:
+            try:
+                super().__init__(enable_timing=enable_timing, blocking=blocking, interprocess=interprocess)
+            except TypeError:
+                try: # Older PyTorch might not take these in _EventBase init
+                    super().__init__()
+                except Exception as e_super:
+                    log_warning(f"[TORCHDEVICE] Error calling _EventBase.__init__ for t_cuda_Event: {e_super}") 
+            except Exception as e:
+                log_warning(f"[TORCHDEVICE] Error calling _EventBase.__init__ with args for t_cuda_Event: {e}")
+
+        actual_device_str = DeviceManager.get_default_device() if device is None else device
+        self._device: torch.device = torch.device(DeviceManager.torch_device_replacement(actual_device_str))
+        self.enable_timing: bool = enable_timing
+        self.blocking: bool = blocking # Note: 'blocking' behavior is specific to CUDA host-side sync
+        self.interprocess: bool = interprocess
+        if interprocess:
+            log_warning("[TORCHDEVICE] Interprocess events not fully supported for non-CUDA devices.")
+        
+        self._recorded: bool = False
+        self._record_time: Optional[float] = None
+        self._stream: Optional['torch.cuda.Stream'] = None # Type hint for stream, using torch.cuda.Stream for broader compatibility
+
+    @property
+    def device(self) -> torch.device:
+        return self._device
+
+    @auto_log()
+    def record(self, stream: Optional['torch.cuda.Stream'] = None) -> None: 
+        if stream is not None:
+             if self.device != stream.device: # type: ignore
+                 log_warning(f"[TORCHDEVICE] Event ({self.device}) and recording stream ({stream.device}) device mismatch on record.") # type: ignore
+        self._stream = stream 
+
+        self._recorded = True
+        if self.enable_timing:
+            self._record_time = time.time()
+
+    @auto_log()
+    def wait(self, stream: Optional['torch.cuda.Stream'] = None) -> None: 
+        if not self._recorded:
+            log_warning("[TORCHDEVICE] t_cuda_Event.wait() called before record(). This is typically an error.")
+            return
+
+        if self._stream is not None:
+            self._stream.synchronize() 
+        elif self.blocking:
+            if self.device.type == 'mps' and hasattr(torch.mps, 'synchronize'):
+                torch.mps.synchronize()
+
+    @auto_log()
+    def query(self) -> bool:
+        return self._recorded 
+
+    @auto_log()
+    def elapsed_time(self, end_event: 't_cuda_Event') -> float:
+        if not self.enable_timing or not end_event.enable_timing:
+            raise RuntimeError("Timing not enabled for one or both events.")
+        if not self._recorded or not end_event._recorded:
+            raise RuntimeError("One or both events not recorded.")
+        if self._record_time is None or end_event._record_time is None:
+            raise RuntimeError("Internal error: record time not set despite timing enabled and event recorded.")
+        if self._device != end_event._device:
+            log_warning(f"[TORCHDEVICE] elapsed_time called on events from different devices: {self._device} vs {end_event._device}")
+        
+        return (end_event._record_time - self._record_time) * 1000.0
+
+    @auto_log()
+    def synchronize(self) -> None:
+        if not self._recorded:
+            log_warning("[TORCHDEVICE] t_cuda_Event.synchronize() called before record().")
+            return
+
+        if self._stream is not None:
+            self._stream.synchronize()
+        else:
+            if self.device.type == 'mps' and hasattr(torch.mps, 'synchronize'):
+                torch.mps.synchronize()
+
+    def __str__(self) -> str:
+        return f"<t_cuda_Event device={self.device} recorded={self._recorded}>"
+
+# --- Factory Functions ---
+@auto_log()
+def t_cuda_event_factory(**kwargs: Any) -> t_cuda_Event:
+    """Factory for creating t_cuda_Event instances."""    
+    return t_cuda_Event(**kwargs)
 
 @auto_log()
-def Event(enable_timing: bool = False, blocking: bool = False, interprocess: bool = False) -> Optional[Any]:
-    """Create a new CUDA event or a mock equivalent."""
-    from TorchDevice.core.device import DeviceManager  # Local import
-    device = DeviceManager.get_default_device()
-    if device.type == 'cuda' and t_cuda_Event:
-        log_info("Returning native CUDA Event for device type: %s", device.type)
-        return t_cuda_Event(enable_timing=enable_timing, blocking=blocking, interprocess=interprocess)
-    # For MPS or CPU, or if CUDA event is not available (e.g. t_cuda_Event is None but device.type is 'cuda')
-    elif device.type in ['mps', 'cpu'] or (device.type == 'cuda' and not t_cuda_Event):
-        log_info("Returning MockCudaEvent for device type: %s (t_cuda_Event available: %s)", 
-                 device.type, (t_cuda_Event is not None))
-        return MockCudaEvent(enable_timing=enable_timing, blocking=blocking, interprocess=interprocess)
-    
-    log_info("Event creation returning None for device type: %s (this path should ideally not be hit)", device.type)
-    return None # Fallback, though above conditions should cover active device types
-
+def Event(enable_timing: bool = False, blocking: bool = False, interprocess: bool = False, device: Optional[Any] = None) -> t_cuda_Event:
+    """Create a new CUDA event using the t_cuda_Event implementation."""
+    return t_cuda_Event(enable_timing=enable_timing, blocking=blocking, interprocess=interprocess, device=device)
 
 @auto_log()
-def current_event() -> Optional[Any]:
-    """Get the current CUDA event."""
-    from TorchDevice.core.device import DeviceManager  # Local import
-    device = DeviceManager.get_default_device()
-    if device.type == 'cuda' and t_cuda_current_event is not None:
-        return t_cuda_current_event()
+def current_event() -> Optional[Any]: 
+    """Get the current CUDA event. (Currently uses original if available, may need mock)"""
+    if hasattr(torch.cuda, 'current_event') and torch.cuda.current_event is not None:
+         try:
+            return torch.cuda.current_event()
+         except Exception as e:
+            log_info(f"Error calling original torch.cuda.current_event: {e}") 
     return None
 
-
-@auto_log()
-def torch_cuda_synchronize_replacement(device_arg: Optional[Any] = None) -> None:
-    """
-    Replacement for torch.cuda.synchronize().
-    Redirects to torch.mps.synchronize() if the default device is MPS,
-    calls original torch.cuda.synchronize(device_arg) if the default is CUDA,
-    or is a no-op if the default is CPU.
-    """
-    from TorchDevice.core.device import DeviceManager # Local import
-    
-    default_device_type = DeviceManager.get_default_device().type
-    log_info("torch_cuda_synchronize_replacement called with device_arg: %s. Default device type: %s", device_arg, default_device_type)
-
-    if default_device_type == 'cuda':
-        if t_cuda_synchronize:
-            log_info("Calling original t_cuda_synchronize for CUDA default device.")
-            t_cuda_synchronize(device_arg) # Pass original device_arg
-        else:
-            log_info("Original t_cuda_synchronize is None (CUDA default). No-op.")
-    elif default_device_type == 'mps':
-        if hasattr(torch.mps, 'synchronize'):
-            log_info("Calling torch.mps.synchronize for MPS default device.")
-            torch.mps.synchronize() # torch.mps.synchronize does not take a device argument
-        else:
-            log_info("torch.mps.synchronize not found (MPS default). No-op.")
-    elif default_device_type == 'cpu':
-        log_info("torch.cuda.synchronize is a no-op on CPU default device.")
-        pass # No-op for CPU
-    else:
-        log_info("Unknown default device type for synchronize: %s", default_device_type)
-
-
 def apply_patches() -> None:
-    """Apply CUDA event and synchronize patches."""
-    log_info("Applying CUDA event and synchronize patches")
+    """Apply CUDA event patches using t_cuda_Event."""
+    log_info("Applying CUDA event patches (ops.events.cuda)")
 
-    # Patch event functions
-    if hasattr(torch.cuda, 'Event'): # If torch.cuda.Event exists, patch it
-        setattr(torch.cuda, 'Event', Event)
-        log_info("Patched torch.cuda.Event.")
-    elif hasattr(torch, 'cuda'): # If torch.cuda exists but Event doesn't, create Event pointing to our factory
-        setattr(torch.cuda, 'Event', Event)
-        log_info("torch.cuda.Event not found, created and patched.")
+    if hasattr(torch, 'cuda'):
+        setattr(torch.cuda, 'Event', Event) 
+        log_info("Patched torch.cuda.Event with t_cuda_Event via factory.")
 
-    if hasattr(torch.cuda, 'current_event'): # If torch.cuda.current_event exists, patch it
-        setattr(torch.cuda, 'current_event', current_event)
-        log_info("Patched torch.cuda.current_event.")
-    elif hasattr(torch, 'cuda'): # If torch.cuda exists but current_event doesn't, create current_event
-        setattr(torch.cuda, 'current_event', current_event)
-        log_info("torch.cuda.current_event not found, created and patched.")
-    
-    # Patch synchronize function
-    if hasattr(torch, 'cuda'): # Ensure the cuda module itself exists
-        setattr(torch.cuda, 'synchronize', torch_cuda_synchronize_replacement)
-        log_info("Set torch.cuda.synchronize to torch_cuda_synchronize_replacement.")
+        log_info("Skipping torch.cuda.current_event patch by ops.events.cuda for now.")
+        
+        log_info("Skipping torch.cuda.synchronize patch by ops.events.cuda (handled by ops.streams.sync).")
     else:
-        log_info("torch.cuda module not found, cannot patch synchronize.")
+        log_info("torch.cuda module not found, cannot patch Event for ops.events.cuda.")
 
-    log_info("CUDA event and synchronize patches applied")
-
+    log_info("CUDA event patches applied (ops.events.cuda)")
 
 # Module initialization
-log_info("Initializing TorchDevice CUDA events module")
+log_info("Initializing TorchDevice CUDA events module (ops.events.cuda)")
 
 __all__: list[str] = [
-    'Event',
+    'Event',        
     'current_event',
+    't_cuda_Event', 
+    't_cuda_event_factory',
     'apply_patches'
 ]
 
-log_info("TorchDevice CUDA events module initialized")
+log_info("TorchDevice CUDA events module initialized (ops.events.cuda)")

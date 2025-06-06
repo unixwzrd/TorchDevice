@@ -6,6 +6,7 @@ This module tests that all expected CUDA functions are available and return expe
 even when running on systems without actual CUDA hardware.
 """
 import unittest
+import sys
 from typing import List, Tuple, Union, Type, Any, Optional
 import torch
 from common.test_utils import PrefixedTestCase
@@ -117,4 +118,4 @@ class TestCUDAStubs(PrefixedTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])
