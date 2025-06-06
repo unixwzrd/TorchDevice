@@ -191,8 +191,8 @@ def log_error(message: str, *args: Any) -> None:
     with _log_lock:
         _info_logger.error(message % args if args else message)
 
-def auto_log(original_func_name_override: Optional[str] = None) -> Callable[[F], F]:
-    """Decorator to automatically log function calls using `log_message` for GPU redirection context."""
+def auto_log() -> Callable[[F], F]:
+    """Decorator factory to automatically log function calls using `log_message` for GPU redirection context."""
     def decorator(func: F) -> F:
         func_qualname = getattr(func, '__qualname__', func.__name__)
         if func_qualname in _INTERNAL_LOG_SKIP or func.__name__ in _INTERNAL_LOG_SKIP:
@@ -201,8 +201,13 @@ def auto_log(original_func_name_override: Optional[str] = None) -> Callable[[F],
         @functools.wraps(func)
         def auto_log_wrapper(*args: Any, **kwargs: Any) -> Any:
             _init_thread_locals()
+            # Check if logging for this level is enabled. INFO is used by auto_log implicitly.
+            # The original check was `_in_device_op.value or CURRENT_LOG_LEVEL_INT > logging.INFO`
+            # which meant auto_log messages (which are INFO level) would be skipped if global level was higher than INFO.
+            # And also if _in_device_op.value was true (internal op, skip detailed logging).
+            # Let's refine this: auto_log messages are INFO. They should appear if global level is INFO or DEBUG.
             if _in_device_op.value or CURRENT_LOG_LEVEL_INT > logging.INFO:
-                return func(*args, **kwargs)
+                 return func(*args, **kwargs)
 
             _logging_depth.value += 1
             # Limit recursion depth for auto_log to prevent excessive logging
@@ -211,7 +216,7 @@ def auto_log(original_func_name_override: Optional[str] = None) -> Callable[[F],
                 _logging_depth.value -=1
                 return result
 
-            effective_func_name = original_func_name_override or func.__name__
+            effective_func_name = func.__name__ # original_func_name_override is removed
 
             # Lazy formatting of args for the log message
             # The full string is only constructed if logging actually happens.

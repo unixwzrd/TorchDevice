@@ -27,54 +27,53 @@ This checklist outlines the steps for modularizing the TorchDevice codebase. Eac
 
 - [x] Random Operations (from TorchDevice.original/device/random.py and ops/device/cuda.py)
   - [x] Centralize RNG state management and patching for `torch`, `torch.cuda`, and `torch.mps` into ops/random/generators.py
-  - [ ] Move distribution functions to ops/random/distributions.py
+  - [x] Move distribution functions to ops/random/distributions.py
   - [x] Consolidate seed management functions within ops/random/generators.py
   - [x] Ensure all device-specific RNG operations (especially CUDA-related) are handled by ops/random/generators.py, removing stubs from ops/device/cuda.py
 
 ## Phase 4: Memory Management
 
-- [ ] Memory Operations (from TorchDevice.original/device/memory.py)
-  - [ ] Memory allocation in ops/memory/management.py
-  - [ ] Memory tracking in ops/memory/stats.py
-  - [ ] Cache management functions
-  - [ ] Device memory helpers
+- [x] Memory Operations (from TorchDevice.original/device/memory.py)
+  - [x] Memory allocation in ops/memory/management.py
+  - [x] Memory tracking in ops/memory/stats.py
+  - [x] Cache management functions
+  - [x] Device memory helpers
 
 ## Phase 5: Neural Network Operations
 
-- [ ] Neural Network Components (from TorchDevice.original/device/nn.py)
-  - [ ] Basic operations in ops/nn/layers.py
-  - [ ] Container operations in ops/nn/containers.py
-  - [ ] Attention mechanisms in ops/nn/attention.py
-  - [ ] Normalization in ops/nn/normalization.py
-  - [ ] Activation functions in ops/nn/activation.py
-  - [ ] Weight initialization in ops/nn/init.py
+- [x] Neural Network Components (from TorchDevice.original/device/nn.py)
+  - [x] Basic operations in ops/nn/layers.py
+  - [x] Attention mechanisms in ops/nn/attention.py
+  - [x] Normalization in ops/nn/normalization.py
+  - [x] Activation functions in ops/nn/activation.py
+  - [x] Weight initialization in ops/nn/init.py
 
 ## Phase 6: Stream and Event Handling
 
-- [ ] Stream Operations (from TorchDevice.original/device/streams.py)
-  - [ ] CUDA streams in ops/streams/cuda.py
-  - [ ] MPS streams in ops/streams/mps.py
-  - [ ] Synchronization in ops/streams/synchronize.py
+- [x] Stream Operations (from TorchDevice.original/device/streams.py)
+  - [x] CUDA streams in ops/streams/cuda.py
+  - [x] MPS streams in ops/streams/mps.py
+  - [x] Synchronization in ops/streams/synchronize.py
 
 ## Phase 7: Utilities
 
-- [ ] Utility Functions (from TorchDevice.original/utils/)
-  - [ ] Compilation utilities in utils/compile.py
-  - [ ] Type handling in utils/type_utils.py
-  - [ ] Device utilities in utils/device_utils.py
-  - [ ] Error handling in utils/error_handling.py
+- [x] Utility Functions (from TorchDevice.original/utils/)
+  - [x] Compilation utilities in utils/compile.py
+  - [x] Type handling in utils/type_utils.py
+  - [x] Device utilities in utils/device_utils.py
+  - [x] Error handling in utils/error_handling.py
 
 ## Additional Functions to Consider
 
 - [x] Tensor Creation Functions
   - [x] Unified tensor_creation_wrapper relocated to core/patch.py for centralized use
   - [x] Device-specific tensor creation using unified wrapper
-- [ ] Autograd Functions
-  - [ ] Gradient computation
-  - [ ] Backward hooks
-- [ ] Optimizer Functions
-  - [ ] Device-aware parameter updates
-  - [ ] State management
+- [x] Autograd Functions
+  - [x] Gradient computation (handled via AMP module)
+  - [x] Backward hooks (no specific patches identified beyond device placement)
+- [x] Optimizer Functions
+  - [x] Device-aware parameter updates (handled by existing device management)
+  - [x] State management (handled by existing device management)
 
 ## Testing Strategy
 
@@ -112,5 +111,4 @@ For each phase:
 
 **Current Focus:**
 
-- Phase 3: Random Number Generation
-- Phase 4: Memory Management
+- **Additional Functions / Testing**

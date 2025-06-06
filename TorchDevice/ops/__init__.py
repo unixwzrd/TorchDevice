@@ -12,7 +12,9 @@ from . import (
     random,
     streams,
     events,
-    autograd
+    autograd,
+    amp,
+    optimizer
 )
 
 log_info("Initializing TorchDevice ops module")
@@ -27,6 +29,8 @@ def apply_patches() -> None:
     streams.apply_patches()
     events.apply_patches()
     autograd.apply_patches()
+    amp.apply_patches()
+    optimizer.apply_patches()
     log_info("All ops module patches applied")
 
 __all__: list[str] = [
@@ -37,6 +41,8 @@ __all__: list[str] = [
     'streams',
     'events',
     'autograd',
+    'amp',
+    'optimizer',
     'apply_patches' # Added apply_patches
 ]
 

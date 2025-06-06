@@ -18,6 +18,7 @@ from ...core.device import DeviceManager
 
 
 _patches_applied: bool = False
+_original_cuda_event_record: Optional[Callable] = None # Placeholder for future if needed
 
 # --- Base Class Resolution Helpers ---
 def _get_stream_base() -> Type:
@@ -42,6 +43,109 @@ def _get_stream_base() -> Type:
 _StreamBase: Type = _get_stream_base()
 
 # --- Stream and Event Class Definitions (Ported and Adapted) ---
+
+_EventBase: Type = object # PyTorch Event doesn't have a clear public base like _StreamBase
+
+class t_cuda_Event(_EventBase): # type: ignore
+    """Replacement for torch.cuda.Event (MPS/CPU)."""
+    def __init__(self, enable_timing: bool = False, blocking: bool = False, interprocess: bool = False):
+        # Args blocking, interprocess are hints for CUDA, may not directly map to MPS/CPU
+        self._td_enable_timing: bool = enable_timing
+        self._td_device: Optional[torch.device] = None # Set on record
+        self._td_recorded_time: Optional[float] = None
+        self._td_is_recorded: bool = False
+        # For PyTorch compatibility, some attributes might be expected
+        self.cuda_event = self # For compatibility with some PyTorch internal checks
+
+    @property
+    def device(self) -> Optional[torch.device]:
+        return self._td_device
+
+    @auto_log()
+    def record(self, stream: Optional['t_cuda_Stream'] = None) -> None:
+        """Records the event in a given stream."""
+        if stream is not None:
+            self._td_device = stream.device
+        else:
+            # If no stream, record on current stream of default device
+            # This requires getting the current stream, which might create one
+            current_default_stream = t_cuda_current_stream_factory(DeviceManager.get_default_device_str())
+            self._td_device = current_default_stream.device
+
+        if self._td_device.type == 'mps':
+            if hasattr(torch.mps, 'synchronize'): # Ensure queue is flushed before timing
+                 torch.mps.synchronize()
+        elif self._td_device.type == 'cuda':
+            # If this is ever called in a real CUDA context (e.g. passthrough mode)
+            # it would need to call the original torch.cuda.Event.record()
+            # For now, assume TorchDevice handles redirection fully.
+            if _original_cuda_event_record is not None and hasattr(self, '_cuda_event_obj_if_real_cuda'):
+                # This path is hypothetical for a mixed-mode TorchDevice
+                # _original_cuda_event_record(self._cuda_event_obj_if_real_cuda, stream)
+                pass # No-op for now in pure mock/redirect mode
+            pass 
+
+        if self._td_enable_timing:
+            self._td_recorded_time = time.perf_counter()
+        self._td_is_recorded = True
+        log_info(f"Event recorded on device {self._td_device}, timing enabled: {self._td_enable_timing}")
+
+    @auto_log()
+    def synchronize(self) -> None:
+        """Waits for the event to complete."""
+        if not self._td_is_recorded:
+            log_warning("Called synchronize on an event that was not recorded.")
+            return
+        if self._td_device and self._td_device.type == 'mps':
+            if hasattr(torch.mps, 'synchronize'): # General MPS sync as proxy
+                torch.mps.synchronize()
+        # For CPU, record is instantaneous from this perspective
+        # For actual CUDA, would call original event's synchronize
+
+    @auto_log()
+    def query(self) -> bool:
+        """Checks if the event has completed."""
+        # For non-CUDA or mocked CUDA, assume recorded events are synchronized instantly or after synchronize() call.
+        # A more sophisticated mock might delay this, but for now, if recorded, it's considered done.
+        return self._td_is_recorded
+
+    @auto_log()
+    def elapsed_time(self, end_event: 't_cuda_Event') -> float:
+        """Computes the elapsed time between two events."""
+        if not self._td_enable_timing or not end_event._td_enable_timing:
+            raise RuntimeError("Timing must be enabled for both events to compute elapsed_time.")
+        if not self._td_is_recorded or not end_event._td_is_recorded:
+            raise RuntimeError("Both events must be recorded to compute elapsed_time.")
+        if self._td_recorded_time is None or end_event._td_recorded_time is None:
+            # Should not happen if recorded and timing enabled
+            raise RuntimeError("Recorded time not available for one or both events.")
+        
+        # Ensure events are on the same device type for sensible timing
+        # Device index comparison might be too strict if one is None then resolved
+        start_device_type = self._td_device.type if self._td_device else None
+        end_device_type = end_event._td_device.type if end_event._td_device else None
+        if start_device_type != end_device_type:
+            log_warning(f"Calculating elapsed_time between events on different device types: {start_device_type} and {end_device_type}")
+
+        return (end_event._td_recorded_time - self._td_recorded_time) * 1000.0  # milliseconds
+
+    @auto_log()
+    def wait(self, stream: Optional['t_cuda_Stream'] = None) -> None:
+        """Makes all future work submitted to the given stream wait for this event."""
+        # This is a simplification. True CUDA event.wait() has complex interactions.
+        # For mock, we ensure this event is synchronized.
+        # If a stream is given, that stream should effectively synchronize with this event.
+        # The stream's own operations would then be delayed.
+        self.synchronize()
+        if stream is not None:
+            # If the stream is on a different device, this might be problematic in real CUDA.
+            # For our mock, we can assume stream.synchronize() would achieve a similar barrier effect
+            # after this event is complete.
+            # Or, more directly, if stream operations are enqueued, they'd see the effect of this sync.
+            # This is a bit hand-wavy for a mock; true implementation is complex.
+            log_info(f"Event.wait() called for stream {stream}. Event is synchronized. Stream operations will proceed after.")
+
+
 class t_cuda_Stream(_StreamBase): # type: ignore
     """Replacement for torch.cuda.Stream (MPS/CPU)."""
     def __init__(self, device: Optional[Any] = None, priority: int = 0, **kwargs: Any):
@@ -220,6 +324,23 @@ def apply_patches() -> None:
         torch.Stream = GlobalStreamWrapper # type: ignore
         log_info("[TORCHDEVICE] Patched global torch.Stream.")
 
+    # Patch torch.cuda.Event and global torch.Event
+    if hasattr(torch, 'cuda'): # Ensure torch.cuda namespace exists
+        if not hasattr(torch.cuda, 'Event') or not isinstance(torch.cuda.Event, type(t_cuda_Event)):
+            # Store original if we ever need it for passthrough, though not currently used
+            # if hasattr(torch.cuda, 'Event'):
+            #     _original_cuda_Event = torch.cuda.Event
+            torch.cuda.Event = t_cuda_Event
+            log_info("[TORCHDEVICE] Patched torch.cuda.Event.")
+    
+    if hasattr(torch, 'Event') and not isinstance(torch.Event, type(t_cuda_Event)):
+        # Similar to Stream, provide a factory if torch.Event is a direct class
+        class GlobalEventWrapper:
+            def __new__(cls, *args: Any, **kwargs: Any) -> t_cuda_Event:
+                return t_cuda_Event(*args, **kwargs)
+        torch.Event = GlobalEventWrapper # type: ignore
+        log_info("[TORCHDEVICE] Patched global torch.Event.")
+
     _patches_applied = True
     log_info("[TORCHDEVICE] ops.streams.cuda patches application process complete.")
 
@@ -229,5 +350,6 @@ __all__ = [
     't_cuda_stream_context_manager',
     't_cuda_current_stream_factory',
     't_cuda_default_stream_factory',
+    't_cuda_Event',
     'apply_patches'
 ]

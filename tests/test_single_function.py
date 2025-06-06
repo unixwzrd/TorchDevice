@@ -53,6 +53,10 @@ class TestSingleFunction(unittest.TestCase):
             cpu_tensor = cpu_tensor.cpu()
         self.assertTrue(torch.allclose(cpu_tensor, cpu_tensor_again))
         
+        # Toggle CPU override OFF to allow .cuda() to redirect to MPS if available
+        print("Toggling CPU override OFF")
+        torch.device("cpu:-1")
+        
         # Test cuda() function which should redirect to MPS
         mps_tensor2 = cpu_tensor.cuda()
         print(f"mps_tensor2 device (from cuda call): {mps_tensor2.device}")

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## 2025-06-06 - 0.4.1 - Attention Test Refactoring
+
+### Improved
+
+- Refactored `tests/test_attention.py` to exclusively use standard PyTorch APIs (`torch.nn.functional.scaled_dot_product_attention`, `torch.nn.MultiheadAttention`, and `transformers.BertSelfAttention`) instead of internal TorchDevice replacement functions. This ensures tests accurately validate TorchDevice's transparent patching capabilities for attention mechanisms.
+- Removed direct imports of TorchDevice internal functions from `tests/test_attention.py`.
+- Ensured `import TorchDevice` is present in `tests/test_attention.py` to apply patches before test execution.
+
 ### Added
 
 - Complete project restructuring with new modular architecture

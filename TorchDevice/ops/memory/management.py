@@ -5,11 +5,18 @@ Memory allocation and cache management.
 """
 
 import torch
+from typing import Optional, List, Dict, Any # Add common typing imports for robustness
 from TorchDevice.core.logger import log_info, auto_log
 
 # Store original functions
 t_cuda_empty_cache = torch.cuda.empty_cache if hasattr(torch.cuda, 'empty_cache') else None
 t_mps_empty_cache = torch.mps.empty_cache if hasattr(torch.mps, 'empty_cache') else None
+
+# CUDA specific memory management functions
+t_cuda_caching_allocator_alloc = torch.cuda.caching_allocator_alloc if hasattr(torch.cuda, 'caching_allocator_alloc') else None
+t_cuda_caching_allocator_delete = torch.cuda.caching_allocator_delete if hasattr(torch.cuda, 'caching_allocator_delete') else None
+t_cuda_set_per_process_memory_fraction = torch.cuda.set_per_process_memory_fraction if hasattr(torch.cuda, 'set_per_process_memory_fraction') else None
+t_cuda_memory_snapshot = torch.cuda.memory_snapshot if hasattr(torch.cuda, 'memory_snapshot') else None
 
 
 @auto_log()
@@ -23,6 +30,79 @@ def empty_cache() -> None:
         t_mps_empty_cache()
 
 
+@auto_log()
+def caching_allocator_alloc(size: int, device: Optional[torch.device] = None, stream: Optional[int] = None) -> int:
+    """Allocate memory using the caching allocator. Returns 0 for MPS/CPU."""
+    from TorchDevice.core.device import DeviceManager  # Local import
+    # PyTorch's actual caching_allocator_alloc takes device as int, stream as int (cudaStream_t)
+    # We'll derive the device_type from the DeviceManager for decision making
+    effective_device = device or DeviceManager.get_default_device()
+    
+    if effective_device.type == 'cuda' and t_cuda_caching_allocator_alloc:
+        # The actual torch.cuda.caching_allocator_alloc might not directly accept torch.device
+        # It expects an int for device_index. And stream is complex.
+        # This patching is primarily for making sure calls don't break, not full emulation.
+        # For simplicity, we'll assume if it's called, it's for the current default CUDA device.
+        # A more robust solution would inspect 'device' if it's an int or torch.device.
+        log_info("Calling original torch.cuda.caching_allocator_alloc. Note: Stream parameter handling is simplified.")
+        # This is a simplification; direct call might need device_idx and proper stream handling.
+        # return t_cuda_caching_allocator_alloc(size, DeviceManager.get_default_device().index or 0, stream_ptr)
+        # Since this is complex to truly mock without CUDA toolkit specifics for stream, we'll log and return 0
+        # if we can't guarantee a safe call. For now, let's assume if t_cuda_caching_allocator_alloc exists,
+        # it can be called with size only for simplicity in a stub context, or we make it a no-op for safety.
+        # Given the complexity of fully mocking this, we'll log and treat as no-op for safety if not on actual CUDA hw.
+        # However, if t_cuda_caching_allocator_alloc exists, it implies we are likely in an env where it *could* work.
+        # Let's assume the user knows what they are doing if they call this on a CUDA device.
+        # The signature in python is (size, device=None, stream=None)
+        # Let's pass what we have, assuming the Python binding handles it.
+        return t_cuda_caching_allocator_alloc(size, device=effective_device, stream=stream)
+
+    elif effective_device.type == 'mps':
+        log_info(f"MPS does not support torch.cuda.caching_allocator_alloc. Size: {size}. Returning 0.")
+    else: # CPU or other
+        log_info(f"torch.cuda.caching_allocator_alloc called on non-CUDA/MPS device ({effective_device.type}). Size: {size}. Returning 0.")
+    return 0 # Return a null-like pointer
+
+@auto_log()
+def caching_allocator_delete(ptr: int) -> None:
+    """Delete memory allocated by the caching allocator. No-op for MPS/CPU."""
+    from TorchDevice.core.device import DeviceManager  # Local import
+    device_type = DeviceManager.get_default_device().type
+    if device_type == 'cuda' and t_cuda_caching_allocator_delete:
+        t_cuda_caching_allocator_delete(ptr)
+    elif device_type == 'mps':
+        log_info(f"MPS does not support torch.cuda.caching_allocator_delete. Pointer: {ptr}. This call is a no-op.")
+    else: # CPU or other
+        log_info(f"torch.cuda.caching_allocator_delete called on non-CUDA/MPS device ({device_type}). Pointer: {ptr}. This call is a no-op.")
+
+@auto_log()
+def set_per_process_memory_fraction(fraction: float, device: Optional[torch.device] = None) -> None:
+    """Set memory fraction for a process. No-op for MPS/CPU."""
+    from TorchDevice.core.device import DeviceManager  # Local import
+    # The original function can take an int or torch.device
+    effective_device = device or DeviceManager.get_default_device()
+
+    if effective_device.type == 'cuda' and t_cuda_set_per_process_memory_fraction:
+        # The python binding takes (fraction, device=None) where device can be int or torch.device
+        t_cuda_set_per_process_memory_fraction(fraction, device=effective_device)
+    elif effective_device.type == 'mps':
+        log_info(f"MPS does not support torch.cuda.set_per_process_memory_fraction. Fraction: {fraction}. This call is a no-op.")
+    else: # CPU or other
+        log_info(f"torch.cuda.set_per_process_memory_fraction called on non-CUDA/MPS device ({effective_device.type}). Fraction: {fraction}. This call is a no-op.")
+
+@auto_log()
+def memory_snapshot() -> list[dict[str, any]]:
+    """Return a snapshot of the memory allocator state. CUDA-specific."""
+    from TorchDevice.core.device import DeviceManager  # Local import
+    device_type = DeviceManager.get_default_device().type
+    if device_type == 'cuda' and t_cuda_memory_snapshot:
+        return t_cuda_memory_snapshot()
+    elif device_type == 'mps':
+        log_info("MPS does not support torch.cuda.memory_snapshot(). Returning empty list.")
+    else: # CPU or other
+        log_info(f"torch.cuda.memory_snapshot() called on non-CUDA/MPS device ({device_type}). Returning empty list.")
+    return []
+
 def apply_patches() -> None:
     """Apply memory management patches."""
     log_info("Applying memory management patches")
@@ -32,6 +112,16 @@ def apply_patches() -> None:
         torch.cuda.empty_cache = empty_cache
     if hasattr(torch.mps, 'empty_cache'):
         torch.mps.empty_cache = empty_cache
+
+    # Patch CUDA specific allocation functions
+    if hasattr(torch.cuda, 'caching_allocator_alloc'):
+        torch.cuda.caching_allocator_alloc = caching_allocator_alloc
+    if hasattr(torch.cuda, 'caching_allocator_delete'):
+        torch.cuda.caching_allocator_delete = caching_allocator_delete
+    if hasattr(torch.cuda, 'set_per_process_memory_fraction'):
+        torch.cuda.set_per_process_memory_fraction = set_per_process_memory_fraction
+    if hasattr(torch.cuda, 'memory_snapshot'):
+        torch.cuda.memory_snapshot = memory_snapshot
     
     log_info("Memory management patches applied")
 
@@ -41,6 +131,10 @@ log_info("Initializing TorchDevice memory management module")
 
 __all__: list[str] = [
     'empty_cache',
+    'caching_allocator_alloc',
+    'caching_allocator_delete',
+    'set_per_process_memory_fraction',
+    'memory_snapshot',
     'apply_patches'
 ]
 

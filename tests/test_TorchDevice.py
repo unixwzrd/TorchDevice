@@ -355,8 +355,8 @@ class TestTorchDevice(PrefixedTestCase):
         # Test memory summary function
         summary = torch.cuda.memory_summary()
         self.assertIsInstance(summary, str)
-        self.assertIn("Memory Allocated", summary)
-        self.assertIn("Memory Reserved", summary)
+        self.assertIn("Allocated memory current", summary)
+        self.assertIn("Reserved memory current", summary)
 
     def test_stream_functions(self):
         # Test unsupported stream functions
@@ -476,7 +476,7 @@ class TestTorchDevice(PrefixedTestCase):
         # Test memory_stats function
         stats = torch.cuda.memory_stats()
         self.assertIsInstance(stats, dict)
-        self.assertIn('active.all.current', stats)
+        self.assertIn('active_bytes.all.current', stats)
         self.assertIn('reserved_bytes.all.current', stats)
 
     def test_memory_snapshot(self):

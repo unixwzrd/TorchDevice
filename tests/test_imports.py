@@ -4,7 +4,7 @@ Test Module Import Structure
 Verify that all TorchDevice modules import correctly and in the right order.
 """
 
-import pytest
+import unittest
 import sys
 import logging
 from pathlib import Path
@@ -18,69 +18,70 @@ if str(project_root) not in sys.path:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def test_core_imports():
-    """Test that core modules import correctly."""
-    from TorchDevice.core import device, patch, logger
-    assert device is not None
-    assert patch is not None
-    assert logger is not None
+class TestImports(unittest.TestCase):
+    def test_core_imports(self):
+        """Test that core modules import correctly."""
+        from TorchDevice.core import device, patch, logger
+        self.assertIsNotNone(device)
+        self.assertIsNotNone(patch)
+        self.assertIsNotNone(logger)
 
-def test_ops_memory_imports():
-    """Test that memory operation modules import correctly."""
-    from TorchDevice.ops.memory import management, stats
-    assert management is not None
-    assert stats is not None
+    def test_ops_memory_imports(self):
+        """Test that memory operation modules import correctly."""
+        from TorchDevice.ops.memory import management, stats
+        self.assertIsNotNone(management)
+        self.assertIsNotNone(stats)
 
-def test_ops_nn_imports():
-    """Test that neural network modules import correctly."""
-    from TorchDevice.ops.nn import (
-        containers, layers, normalization,
-        activation, attention, init
-    )
-    assert containers is not None
-    assert layers is not None
-    assert normalization is not None
-    assert activation is not None
-    assert attention is not None
-    assert init is not None
+    def test_ops_nn_imports(self):
+        """Test that neural network modules import correctly."""
+        from TorchDevice.ops.nn import (
+            containers, layers, normalization,
+            activation, attention, init
+        )
+        self.assertIsNotNone(containers)
+        self.assertIsNotNone(layers)
+        self.assertIsNotNone(normalization)
+        self.assertIsNotNone(activation)
+        self.assertIsNotNone(attention)
+        self.assertIsNotNone(init)
 
-def test_ops_streams_imports():
-    """Test that stream modules import correctly."""
-    from TorchDevice.ops.streams import cuda, mps, synchronize
-    assert cuda is not None
-    assert mps is not None
-    assert synchronize is not None
+    def test_ops_streams_imports(self):
+        """Test that stream modules import correctly."""
+        from TorchDevice.ops.streams import cuda, mps, sync
+        self.assertIsNotNone(cuda)
+        self.assertIsNotNone(mps)
+        self.assertIsNotNone(sync)
 
-def test_ops_autograd_imports():
-    """Test that autograd modules import correctly."""
-    from TorchDevice.ops.autograd import function, variable, grad_mode
-    assert function is not None
-    assert variable is not None
-    assert grad_mode is not None
+    def test_ops_autograd_imports(self):
+        """Test that autograd modules import correctly."""
+        from TorchDevice.ops.autograd import function, variable, grad_mode
+        self.assertIsNotNone(function)
+        self.assertIsNotNone(variable)
+        self.assertIsNotNone(grad_mode)
 
-def test_ops_events_imports():
-    """Test that event modules import correctly."""
-    from TorchDevice.ops.events import cuda_events, mps_events, synchronize
-    assert cuda_events is not None
-    assert mps_events is not None
-    assert synchronize is not None
+    def test_ops_events_imports(self):
+        """Test that event modules import correctly."""
+        from TorchDevice.ops.events import cuda, mps, sync
+        self.assertIsNotNone(cuda)
+        self.assertIsNotNone(mps)
+        self.assertIsNotNone(sync)
 
-def test_utils_imports():
-    """Test that utility modules import correctly."""
-    from TorchDevice.utils import (
-        compile, device_utils, error_handling,
-        profiling, type_utils
-    )
-    assert compile is not None
-    assert device_utils is not None
-    assert error_handling is not None
-    assert profiling is not None
-    assert type_utils is not None
+    def test_utils_imports(self):
+        """Test that utility modules import correctly."""
+        from TorchDevice.utils import (
+            compile, device_utils, error_handling,
+            profiling, type_utils
+        )
+        self.assertIsNotNone(compile)
+        self.assertIsNotNone(device_utils)
+        self.assertIsNotNone(error_handling)
+        self.assertIsNotNone(profiling)
+        self.assertIsNotNone(type_utils)
 
-def test_full_import():
-    """Test importing the entire package."""
-    import TorchDevice
-    assert TorchDevice is not None
+    def test_full_import(self):
+        """Test importing the entire package."""
+        import TorchDevice
+        self.assertIsNotNone(TorchDevice)
 
 if __name__ == '__main__':
-    pytest.main([__file__, '-v']) 
+    unittest.main() 
