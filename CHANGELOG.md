@@ -1,6 +1,22 @@
 # CHANGELOG
 
-## [Unreleased]
+## 0.4.2 - 2025-06-08
+
+### Added
+
+- **Test Automation Framework (`test_automation/`)**:
+  - Introduced `run_transformer_tests.py`, a versatile script for automating test suite execution for Python projects with `TorchDevice` integration.
+  - Key features:
+    - Discovers `test_*.py` files within specified target directories (relative to project's `tests/` dir).
+    - Executes tests using `python -m unittest -v` in isolated subprocesses.
+    - Automatically sets `ACTIVATE_TORCH_DEVICE=1` environment variable to enable `TorchDevice`.
+    - Dynamically configures `PYTHONPATH` to include `TorchDevice` and target project's `src/` directory.
+    - Generates comprehensive logs:
+      - Overall run log with a descriptive name (e.g., `<series>_<timestamp>.log`) in `test_automation/logs/`.
+      - Individual test logs (STDOUT/STDERR) in `test_automation/logs/<project_name>/...`.
+    - Configurable target project root (`--project_root`) and `TorchDevice` root (`--torchdevice_root`).
+    - Designed for general use with Python projects adhering to common test structures.
+  - Added `test_automation/README.md` detailing script usage, configuration, and logging.
 
 ## 2025-06-06 - 0.4.1 - Attention Test Refactoring
 
