@@ -176,7 +176,9 @@ def generate_markdown_report(json_files: list[Path]) -> str:
             for failure in data['failures']:
                 failure_index += 1
                 report_lines.append(f"#### {failure_index}. Failure in `{failure['name']}` (Module: `{failure['module_name']}`)\n")
-                report_lines.append(f"- **Test File Path:** `{failure['module_path']}`")
+                # Prepend the path to the transformers test directory for correct relative linking from the report's location
+                link_path = os.path.join('../../test_projects/transformers', failure['module_path'])
+                report_lines.append(f"- **Test File Path:** [`{failure['module_path']}`]({link_path})")
                 report_lines.append(f"- **Module Duration:** `{failure['module_duration']}`")
                 report_lines.append(f"- **Status:** `{failure['status']}`")
                 report_lines.append(f"- **Key Error Line:** `{failure['key_error_line']}`")

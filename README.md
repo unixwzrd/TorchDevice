@@ -88,6 +88,12 @@ python run_tests_and_install.py
 python run_tests_and_install.py --test-only tests/[test-name.py]
 ```
 
+### Advanced Integration Testing
+
+For comprehensive integration testing against large codebases like Hugging Face Transformers, a dedicated test automation suite is available. This suite manages complex test execution, logging, and reporting. For detailed instructions on setup, dependencies, and usage, please see the dedicated guide:
+
+[**Advanced Test Automation README**](test_automation/README.md)
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.

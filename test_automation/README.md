@@ -47,6 +47,27 @@ When targeting the Hugging Face Transformers library (`--project_root path/to/tr
 
     Install these into your Transformers virtual environment if they are missing (e.g., `pip install parameterized timeout-decorator hf_xet`).
 
+3. **System-Level Dependencies for Full Feature Testing:**
+    Beyond Python packages, some Transformers tests rely on system-level libraries for advanced features like Optical Character Recognition (OCR) and image processing. These are essential for running the *complete* test suite without encountering errors related to missing shared libraries.
+
+    The following libraries are required:
+    * **Tesseract OCR Engine:** For tests involving OCR.
+    * **Image Processing Libraries:**
+        - `libgif`
+        - `libjpeg`
+        - `libtiff`
+        - `libpng`
+        - `libwebp`
+    * **Leptonica:** A dependency for Tesseract.
+    * **OpenMP (`libomp`):** For parallel processing support in some numerical operations.
+
+    On macOS, these can typically be installed using [Homebrew](https://brew.sh/):
+    ```bash
+    brew install tesseract tesseract-data giflib jpeg libtiff libpng webp leptonica libomp
+    ```
+
+    Ensure these are installed and accessible in your system's path before running tests that rely on these features.
+
 ## Usage
 
 The script is run from the command line.
