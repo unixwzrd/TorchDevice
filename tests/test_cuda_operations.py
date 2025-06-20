@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import unittest
+import sys
 from pathlib import Path
 
 import torch
@@ -299,4 +300,4 @@ class TestCUDAOperations(PrefixedTestCase):
         diff_check(self.log_capture)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

@@ -6,13 +6,13 @@ This module tests that all expected CUDA functions are available and return expe
 even when running on systems without actual CUDA hardware.
 """
 import unittest
+import sys
 from typing import List, Tuple, Union, Type, Any, Optional
 import torch
 from common.test_utils import PrefixedTestCase
 
 # Import TorchDevice to ensure CUDA redirection is set up
 import TorchDevice
-
 
 class TestCUDAStubs(PrefixedTestCase):
     """Test that all expected CUDA function stubs are available."""
@@ -28,9 +28,15 @@ class TestCUDAStubs(PrefixedTestCase):
         self.device = torch.device('cuda' if self.has_cuda else 'mps' if self.has_mps else 'cpu')
         self.info("Using device: %s", self.device)
 
-        # Check which device TorchDevice is using
-        self.default_device = TorchDevice.TorchDevice.get_default_device()
-        self.info(f"TorchDevice using default device: {self.default_device}")
+        self.logger.info(f"TestCUDAStubs.setUp: torch.cuda.current_device ID: {id(torch.cuda.current_device)}")
+        self.logger.info(f"TestCUDAStubs.setUp: torch.cuda.device_count ID: {id(torch.cuda.device_count)}")
+        self.logger.info(f"TestCUDAStubs.setUp: torch.cuda.manual_seed_all ID: {id(torch.cuda.manual_seed_all)}")
+        self.logger.info("Finished TestCUDAStubs setUp.")
+
+        # Get the default device through PyTorch's interface
+        # TorchDevice will intercept this call and handle redirection
+        self.default_device = torch.get_default_device()
+        self.info(f"Using default device: {self.default_device}")
 
     def test_cuda_functions(self):
         """Test that all expected CUDA functions are available and return expected types."""
@@ -112,4 +118,4 @@ class TestCUDAStubs(PrefixedTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])

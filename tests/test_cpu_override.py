@@ -5,6 +5,7 @@ Tests the ability to explicitly specify CPU as the default device using 'cpu:-1'
 overriding any available accelerators.
 """
 import unittest
+import sys
 import torch
 from pathlib import Path
 
@@ -133,4 +134,4 @@ class TestCPUOverride(PrefixedTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])
