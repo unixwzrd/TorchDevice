@@ -7,6 +7,7 @@ ensuring that the correct caller information is captured.
 """
 import logging
 import unittest
+import sys
 from pathlib import Path
 
 import torch
@@ -110,4 +111,4 @@ class TestNestedCalls(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])

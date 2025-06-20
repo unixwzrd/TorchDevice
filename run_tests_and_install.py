@@ -55,7 +55,22 @@ def run_test_file(test_file: Path, update_expected: bool) -> bool:
     
     # Build the command.
     cmd = [sys.executable, str(test_file)]
-    if update_expected:
+    # Check if the test file uses pytest before appending pytest-specific flags
+    is_pytest_file = False
+    try:
+        with open(test_file, 'r', encoding='utf-8') as f:
+            # Check a reasonable number of lines for 'import pytest'
+            for _ in range(20): # Check first 20 lines
+                line = f.readline()
+                if not line: # EOF
+                    break
+                if 'import pytest' in line:
+                    is_pytest_file = True
+                    break
+    except Exception as e:
+        logger.warning(f"Could not read {test_file} to check for pytest: {e}")
+
+    if update_expected and is_pytest_file:
         # Append the flag so that the test file's sys.argv contains it.
         cmd.append("--update-expected")
     

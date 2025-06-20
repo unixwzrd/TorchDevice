@@ -5,6 +5,7 @@ This ensures that all operations work correctly on CPU with explicit CPU overrid
 """
 import logging
 import unittest
+import sys
 import torch
 from pathlib import Path
 
@@ -116,4 +117,4 @@ class TestCPUOperations(PrefixedTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])

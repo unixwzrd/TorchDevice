@@ -5,6 +5,7 @@ This module contains tests that verify TorchDevice correctly maintains
 type compatibility with the original torch.device class.
 """
 import unittest
+import sys
 import torch
 # Import TorchDevice to apply patches
 import TorchDevice  # noqa: F401
@@ -98,4 +99,4 @@ class DeviceTypeCompatibilityTest(PrefixedTestCase):
 
 if __name__ == '__main__':
     # Enable to run just this test
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])

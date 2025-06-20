@@ -6,6 +6,7 @@ including device properties, device management, and memory operations.
 """
 import logging
 import unittest
+import sys
 from pathlib import Path
 
 import torch
@@ -197,4 +198,4 @@ class TestDeviceUtils(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main(argv=sys.argv[:1])

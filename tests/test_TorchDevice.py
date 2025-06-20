@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import unittest
+import sys
 import numpy as np
 
 import torch
@@ -43,7 +44,7 @@ class TestTorchDevice(PrefixedTestCase):
         self.assertEqual(device_cuda.type, expected_device_type)
         self.assertEqual(device_mps.type, expected_device_type)
         # Patch: device_cpu should match the hardware default device
-        expected_redirected_device = TorchDevice.TorchDevice.get_default_device()
+        expected_redirected_device = torch.get_default_device()
         self.assertTrue(devices_equivalent(device_cpu, expected_redirected_device))
         self.info("Device instantiation tests completed successfully")
         
@@ -55,7 +56,7 @@ class TestTorchDevice(PrefixedTestCase):
         self.info("Testing CPU operations")
         cpu_tensor = torch.randn(10, device='cpu')
         # Patch: cpu_tensor should match the hardware default device
-        expected_redirected_device = TorchDevice.TorchDevice.get_default_device()
+        expected_redirected_device = torch.get_default_device()
         self.assertTrue(devices_equivalent(cpu_tensor.device, expected_redirected_device))
         
         # Test MPS operations if available
@@ -174,14 +175,14 @@ class TestTorchDevice(PrefixedTestCase):
             t_cpu0 = torch.randn(5, device=cpu0)
             self.assertTrue(devices_equivalent(t_cpu0.device, cpu0))
             # Remove CPU override after test
-            torch.device('cpu:-1')
             
             # Verify the devices match what we expect
             self.assertEqual(t_cpu0.device.type, 'cpu')
+            torch.device('cpu:-1')
             
             if self.has_cuda:
                 expected_type = 'cuda'
-                if self.has_mps and TorchDevice.TorchDevice.get_default_device() == 'mps':
+                if self.has_mps and torch.get_default_device() == 'mps':
                     expected_type = 'mps'
                 self.assertEqual(t_cuda0.device.type, expected_type)
                 self.assertEqual(t_mps0.device.type, expected_type)
@@ -354,8 +355,8 @@ class TestTorchDevice(PrefixedTestCase):
         # Test memory summary function
         summary = torch.cuda.memory_summary()
         self.assertIsInstance(summary, str)
-        self.assertIn("Memory Allocated", summary)
-        self.assertIn("Memory Reserved", summary)
+        self.assertIn("Allocated memory current", summary)
+        self.assertIn("Reserved memory current", summary)
 
     def test_stream_functions(self):
         # Test unsupported stream functions
@@ -475,7 +476,7 @@ class TestTorchDevice(PrefixedTestCase):
         # Test memory_stats function
         stats = torch.cuda.memory_stats()
         self.assertIsInstance(stats, dict)
-        self.assertIn('active.all.current', stats)
+        self.assertIn('active_bytes.all.current', stats)
         self.assertIn('reserved_bytes.all.current', stats)
 
     def test_memory_snapshot(self):
@@ -549,4 +550,4 @@ class TestTorchDevice(PrefixedTestCase):
             self.assertEqual(torch.cuda.current_device(), -1)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=sys.argv[:1])

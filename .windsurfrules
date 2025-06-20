@@ -1,50 +1,63 @@
----
-description: Comparing commands between Tensor Packages
-globs: .py
----
+# Refactoring & Testing Rules for TorchDevice
 
-# Documents to refer to for conversion and inclusion
+## Reference Documents
 
-- Use @<https://pytorch.org/docs/stable/index.html>
+- Use the official @PyTorch documentation as a guide.
+- Additional documentation is in the @.project-planning directory
+- Always refer to the reference implementation in TorchDevice.py.original (or TorchDevice.py.bak) during the refactoring process.
+- Refer to the documents in the @docs directory, especially the @TorchDevice_Behavior.md
 
-## We are developing and testing a new python module in the project directory @TorchDevice/TorchDevice.py
+## Module Purpose & Usage
 
-- This library is **NEVER*** called directly, but hooks into PyTorch and redirects the calls to the appropriate location.
-  - IF the hardware has CUDA, pass through the CUDA calls directly to PyTorch
-  - If the hardware has MPS, pass through the MPS calls directly to PyTorch
-  - If there is no CUDA or MPS available fall back to CPU
-- Migration tool for migrating CUDA code to MPS or MPS code to CUDA
-  - If the code is written for CUDA, and running on and MPS device, it should redirect CUDA calls to MPS.
-  - If the code is written for MOS, and running on and CUDA device, it should redirect MPS calls to CUDA.
-- This library is simple to use and should just be imported into any code and "just work"
-  - When a call is made for the wrong device a warning is displayed identifying the location for code to be changes.
-  - Hooking it into the PyTorch package and intercepting the calls, it should be transparent to the developer or user.
-  - This Library, Object, Class, or any other portion of TorchDevice should lever be called directly.
-  - TorchDevice should never be called directly, it should present an interface identical to PyTorch.
+- Develop and test the new Python module in the project directory: TorchDevice/TorchDevice.py.
+- The library must never be called directly. Instead, it hooks into PyTorch and intercepts device calls to redirect them appropriately:
+- CUDA available: Pass through CUDA calls directly to PyTorch.
+- MPS available: Pass through MPS calls directly to PyTorch.
+- Neither available: Fall back to CPU.
 
-- After making changes to TorchDevice.py we must re-install it in our Virtual Environment with the following command:
+## Migration & Redirection
+
+- This serves as a migration tool for converting CUDA code to run on MPS (and vice versa).
+- If code is written for CUDA but runs on an MPS device, it should redirect CUDA calls to MPS.
+- If code is written for MPS but running on a CUDA device, it should redirect MPS calls to CUDA.
+- The library should present an interface identical to PyTorch. It hooks into the PyTorch package transparently so that:
+- Developers or users never need to call any part of TorchDevice directly.
+- All calls to devices are intercepted and redirected as needed.
+- When a call is made for the wrong device, a warning is displayed, including the location of the call for further code adjustments.
+
+## Installation & Testing
+
+- After making changes to TorchDevice.py, re-install the module in your virtual environment using:
 
 ```bash
-tests/run_tests_and_install.py
+  python run_tests_and_install.py --test-only tests/[test-name.py]
 ```
 
-- We will test Real repository projects from GitHub in the directory  @TorchDevice/test_projects
-- If we find any cases which are not being handled by TorchDevice  during testing, we can fix them by making changes to TorchDevice.py
-- Then reinstall into the current virtual environment with the following command:
+or
 
-- In any project use `impotrt TorchDevice` and it will hook itself into PyTorch or Torch.
-- **There is never any need to make calls to TorchDevice Directly**
-- **NO APPLICATION SPECIFIC PATCHES OR CHANGES TO BE MADE TO TorchDevice**
+```bash
+  python run_tests_and_install.py --test-only --update-expected tests/[test-name.py]
+```
 
-We need to refactor.
-We need to reduce the size of the code somehow
-We need to make it self-contained, not relying on external variables
-Torch device will detect what hardware it is running on and if there is a choice it will let the user decide from available hardware.
-Sometimes we may want to use CPU for performance comparison over MPS or CUDA.
-It should intercept CUDA calls and CUDA device types and replace them with MPS when an MPS device exists.
-It should replace MPS device types with CUDS if it exists.
-It should ultimately fall back to CPU if neither are available.
+(This command is used for both testing and installation.)
 
-The programmer/developer/user, should not have to do anything extra or call TorchDevice themselves
-Torch device is for migrating programs written for one hardware type to another
-TorchDevice should only have to be imported to hook into the Torch framework.
+## After Unit Testing and Completing Refactoring
+
+- Real repository projects from GitHub are placed in the directory TorchDevice/test_projects. Use these projects to test real‑world scenarios.
+- If any cases are not correctly handled during testing, fix them in TorchDevice.py and re-install using the same command.
+- In any project, simply using import TorchDevice should trigger the hook into PyTorch-there should be no need for any direct calls to Torcnt Guidelines
+- No application‑specific patches or changes should be made to TorchDevice.
+- The refactored module must be self‑contained; it should not depend on external environment variables.
+- TorchDevice should detect the available hardware automatically. If multiple devices are available, it should allow the user to choose the desired device.
+- It should intercept CUDA calls and device type requests:
+- Replace CUDA calls with MPS calls when an MPS device exists.
+- Replace MPS device calls with CUDA if appropriate.
+- Ultimately, fall back to CPU if neither CUDA nor MPS are available.
+- The programmer/developer/user should not have to perform any extra steps beyond importing TorchDevice to have it hook into the PyTorch framework.
+
+## Priorities
+
+- Refactoring Priority:
+Focus on breaking down the monolithic TorchDevice.py into clear sub‑modules (e.g., core.py, logging.py, cuda/mocks.py, mps/mocks.py, tensor/operations.py, module/operations.py, utils.py).
+- Testing Priority:
+After refactoring, rigorously test the refactored version of TorchDevice.py using the provided test projects and installation commands to ensure that all redirections and hooks into PyTorch work as intended.

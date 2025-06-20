@@ -1,266 +1,125 @@
 # TorchDevice
 
-TorchDevice is a Python library that enables transparent code portability between NVIDIA CUDA and Apple Silicon (MPS) hardware for PyTorch applications. It intercepts PyTorch calls related to GPU hardware, allowing developers to write code that works seamlessly on both accelerator types without modification. TorchDevice is designed primarily to help port code (for example, HuggingFace Transformers) written for CUDA to run on Apple Silicon (MPS) and vice versa.
+![TorchDevice](docs/TorchDevice001.png)
 
-## Table of Contents
+A Python library for transparent device handling in PyTorch, enabling seamless transitions between CUDA and MPS devices.
 
-- [TorchDevice](#torchdevice)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Installation](#installation)
-    - [Prerequisites](#prerequisites)
-    - [Installing PyTorch](#installing-pytorch)
-      - [Nightly builds for Apple Silicon](#nightly-builds-for-apple-silicon)
-    - [Installing TorchDevice](#installing-torchdevice)
-      - [NumPy and Apple Silicon](#numpy-and-apple-silicon)
-  - [Usage](#usage)
-    - [Important Notes](#important-notes)
-    - [Device Redirection Policy](#device-redirection-policy)
-    - [Usage with Optimizers](#usage-with-optimizers)
-  - [Demo Scripts](#demo-scripts)
-  - [Limitations](#limitations)
-  - [Recent Updates](#recent-updates)
-    - [March 2025 Updates](#march-2025-updates)
-      - [CPU Override Feature](#cpu-override-feature)
-      - [Improved Logging System](#improved-logging-system)
-      - [Stream and Event Handling](#stream-and-event-handling)
-      - [PyTorch Compatibility](#pytorch-compatibility)
-      - [Code Quality](#code-quality)
-    - [Upcoming Changes](#upcoming-changes)
-  - [Project Status and Next Steps](#project-status-and-next-steps)
-  - [Contributing](#contributing)
-  - [Supporting the Development of this Project](#supporting-the-development-of-this-project)
-  - [License](#license)
+## Overview
+
+TorchDevice provides transparent device handling for PyTorch applications, allowing code written for CUDA to run on MPS devices (and vice versa) without modification. It intercepts device-specific calls and redirects them appropriately based on available hardware.
 
 ## Features
 
-- **Automatic Device Redirection**: Intercepts `torch.device` instantiation and related tensor creation calls, redirecting them to the default accelerator (MPS or CUDA) when available.
-- **Explicit CPU Override**: Provides a special `'cpu:-1'` device specification to force CPU usage regardless of available accelerators.
-- **Mocked CUDA Functions**: Mocks CUDA-specific functions so that CUDA code can run on MPS hardware.
-- **Stream and Event Support**: Implements support for CUDA streams and events on MPS devices for asynchronous operations and event timing.
-- **Unified Memory Handling**: Provides reasonable memory-related outputs, bridging differences between CUDA and MPS.
-- **Logging and Debugging**: Outputs detailed log messages indicating the interception and redirection of Torch calls, helping to identify areas in the code that may need migration.
-- **Transparent Integration**: Works seamlessly with existing codebases without modification.
-- **PyTorch Compiler Compatibility**: Fully compatible with PyTorch's dynamo compiler and inductor.
+- **Transparent Device Handling**: Automatically redirects CUDA calls to MPS (and vice versa)
+- **Comprehensive PyTorch Integration**: 
+  - Neural Network Operations
+  - Memory Management
+  - Stream and Event Handling
+  - Automatic Differentiation
+  - Optimization Algorithms
+- **Robust Error Handling**: Graceful fallbacks and informative error messages
+- **Performance Optimization**: Efficient device-specific implementations
+- **Type Safety**: Comprehensive type checking and validation
 
 ## Installation
 
+```bash
+pip install TorchDevice
+```
+
+## Quick Start
+
+```python
+import TorchDevice  # This automatically hooks into PyTorch
+import torch
+
+# Your existing PyTorch code works as is
+model = torch.nn.Linear(10, 10).cuda()  # Will use MPS if CUDA isn't available
+```
+
+## Project Structure
+
+The project is organized into three main components:
+
+1. **Core** (`TorchDevice/core/`): Central device handling and patching
+2. **Operations** (`TorchDevice/ops/`): Device-specific implementations
+3. **Utilities** (`TorchDevice/utils/`): Shared functionality
+
+For detailed structure information, see [Project Structure](docs/project_structure.md).
+
+## Documentation
+
+- [Project Structure](docs/project_structure.md): Detailed project organization
+- [TorchDevice Behavior](docs/TorchDevice_Behavior.md): Core functionality and behavior
+- [API Reference](docs/TorchDevice_Functions.md): Comprehensive API documentation
+- [CUDA Operations](docs/CUDA-Operations.md): CUDA-specific functionality
+
+## Development
+
 ### Prerequisites
 
-- Python 3.7 or higher
-- PyTorch installed with the appropriate support for your hardware:
-  - CUDA support for NVIDIA GPUs
-  - MPS support for Apple Silicon (macOS 12.3+)
-- Additional packages:
-  - `numpy`
-  - `psutil`
+- Python 3.8+
+- PyTorch 2.0+
+- For CUDA development: NVIDIA CUDA Toolkit
+- For MPS development: Apple Silicon Mac
 
-### Installing PyTorch
-
-Follow the [official PyTorch installation instructions](https://pytorch.org/get-started/locally/) for your platform.
-
-#### Nightly builds for Apple Silicon
-
-For the latest builds on Apple Silicon, install via pip:
+### Setup Development Environment
 
 ```bash
-pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+# Clone the repository
+git clone https://github.com/yourusername/TorchDevice.git
+cd TorchDevice
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -e ".[dev]"
 ```
 
-### Installing TorchDevice
+### Running Tests
 
-1. **Clone the Repository**  
-   ```bash
-   git clone https://github.com/unixwzrd/TorchDevice.git
-   ```
+```bash
+# Run all tests
+python run_tests_and_install.py
 
-2. **Navigate to the Project Directory**  
-   ```bash
-   cd TorchDevice
-   ```
-
-3. **Install Dependencies**  
-   ```bash
-   pip install -r requirements.txt
-   ```  
-   Or manually:  
-   ```bash
-   pip install numpy psutil
-   ```
-
-#### NumPy and Apple Silicon
-
-**IMPORTANT – For Apple Silicon, ensure NumPy is linked to the Accelerate Framework** to obtain improved performance for vector operations. (See [VenvUtil](https://github.com/unixwzrd/VenvUtil) for the latest command.)
-
-4. **Install TorchDevice**  
-   You can install it as follows:  
-   ```bash
-   python setup.py install
-   ```  
-   Or via pip:  
-   ```bash
-   pip install .
-   ```
-
-## Usage
-
-Import `TorchDevice` **before** importing `torch` to automatically apply the patches.
-
-```python
-import TorchDevice  # Must be imported first.
-import torch
-
-device = torch.device('cuda')  # On unsupported hardware (e.g. Apple Silicon), this will be redirected (e.g., to "mps").
-# Your existing PyTorch code runs unmodified.
+# Run specific test module
+python run_tests_and_install.py --test-only tests/[test-name.py]
 ```
 
-### Important Notes
+### Advanced Integration Testing
 
-- **Device Selection**: TorchDevice selects an appropriate device based on hardware availability:
-  - If CUDA is requested but unavailable, it redirects to MPS if available.
-  - If MPS is requested but unavailable, it redirects to CUDA if available.
-  - If no accelerator is available, it defaults to CPU.
-- **Logging**: Log messages detail intercepted and redirected calls, including caller information.
-- **Unsupported Functions**: Certain functions not supported on specific hardware are stubbed out, with warnings logged.
-- **Stream and Event Support**: CUDA streams and events are fully supported on MPS devices.
+For comprehensive integration testing against large codebases like Hugging Face Transformers, a dedicated test automation suite is available. This suite manages complex test execution, logging, and reporting. For detailed instructions on setup, dependencies, and usage, please see the dedicated guide:
 
-### Device Redirection Policy
-
-For a full list of device redirection policy, see the [TorchDevice Redirection Behavior](#torchdevice-redirection-behavior) section.
-
-### Usage with Optimizers
-
-TorchDevice works seamlessly with PyTorch optimizers without special configuration. For example:
-
-```python
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from TorchDevice import TorchDevice
-
-# Obtain the configured device
-device = TorchDevice()
-print(f"Using device: {device}")
-
-# Create a model and move it to the device
-model = nn.Linear(10, 2).to(device.device)
-
-# Create an optimizer
-optimizer = optim.SGD(model.parameters(), lr=0.01)
-
-# Training loop operates normally
-```
-
-## Demo Scripts
-
-Demo scripts are provided to showcase TorchDevice usage:
-- `demo_basic_tensor.py`
-- `demo_matrix_multiplication.py`
-- `demo_neural_network.py`
-- `demo_unsupported_functions.py`
-- `demo_device_info.py`
-
-Ensure these scripts are updated to account for any device redirection behavior.
-
-## Limitations
-
-- **Precision Support on MPS:** MPS does not support `float64` (double precision); use `float32` instead.
-- **Multiple Devices on MPS:** MPS does not support multiple devices; device queries and settings may be redirected.
-- **Partial CUDA Functionality:** While many CUDA functions are mocked, some features cannot be fully replicated on MPS hardware.
-- **Performance Considerations:** Mocked functions may not accurately reflect hardware performance.
-- **Tensor Creation:** Some direct tensor creation operations may be forcibly redirected to the accelerator, which could require code adjustments if genuine CPU tensors are needed.
-
-## Recent Updates
-
-### March 2025 Updates
-
-#### CPU Override Feature
-
-- Implemented the special `'cpu:-1'` device specification to force CPU usage.
-- Added a CPU override flag ensuring that all explicit CPU requests produce CPU tensors until the override is toggled off.
-- Enhanced device redirection logic for clarity and maintainability.
-
-#### Improved Logging System
-
-- Consolidated and enhanced logging via the TDLogger module.
-- Standardized log messages including caller filename, function name, and line number.
-- Enhanced log filtering and formatting for better diagnostics.
-
-#### Stream and Event Handling
-
-- Implemented comprehensive CUDA stream functionality on MPS.
-- Added robust support for CUDA event handling, including proper timing and synchronization.
-
-#### PyTorch Compatibility
-
-- Ensured compatibility with PyTorch's dynamo compiler and inductor.
-- Improved compatibility with PyTorch optimizers.
-- Reduced patched functions to the essential minimum.
-
-#### Code Quality
-
-- Improved error handling and message logging for easier debugging.
-- Increased test coverage for streams, events, and device conversion.
-- Refactored code for better maintainability.
-
-### Upcoming Changes
-
-- **Modular Architecture:** Further breakdown of the codebase into smaller, focused modules.
-- **Enhanced Testing:** Additional unit tests for individual components.
-- **Better Documentation:** Expanded examples and detailed API references.
-- **Configurable Logging:** More detailed and configurable log options.
-
-## Project Status and Next Steps
-
-- **Modularization Complete:** All core logic has been modularized into dedicated files (see `TorchDevice/cuda/`).
-- **CPU Override Feature:** The `cpu:-1` syntax is fully supported and documented. See below and the API docs for usage.
-- **All Core Tests Passing:** All unit and integration tests for the modularized codebase are passing as of the latest commit.
-- **Pre-Commit Checklist:** See `.project-planning/pre-commit-checklist.md` for quality, testing, and documentation standards. All items except multi-version/hardware testing and post-commit tasks are complete.
-- **Next Focus:** Running and fixing all example/demo scripts in the `examples/` directory, and expanding user-facing features.
-- **Contributor Guidance:** For ongoing work, see `docs/modularization-plan.md` and `.project-planning/pre-commit-checklist.md` for up-to-date progress and standards.
+[**Advanced Test Automation README**](test_automation/README.md)
 
 ## Contributing
 
-Contributions are welcome! Please:
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-1. Report issues on GitHub.
-2. Submit pull requests for bug fixes or new features.
-3. Improve documentation by fixing errors or adding examples.
-4. Test TorchDevice on various hardware configurations and report your findings.
+## Supporting This Project
 
-Follow these guidelines:
-- Conform to the existing code style.
-- Add tests for new features.
-- Update documentation accordingly.
-- Ensure all tests pass prior to submission.
+TorchDevice is an open-source project developed and maintained by [Michael P. Sullivan (unixwzrd)](https://unixwzrd.ai). If you find this project useful, please consider supporting its development:
 
-## Supporting the Development of this Project
+### Funding Options
+- [Patreon](https://www.patreon.com/unixwzrd)
+- [Ko-Fi](https://ko-fi.com/unixwzrd)
+- [Buy Me a Coffee](https://www.buymeacoffee.com/unixwzrd)
 
-For more information and other projects check out the [Distributed Thinking Systems](https://unixwzrd.ai) website.
+### Other Ways to Support
+1. **Star the Repository**: Show your support by starring the project on GitHub
+2. **Share the Project**: Help spread the word about TorchDevice
+3. **Report Issues**: Help improve the project by reporting bugs or suggesting features
+4. **Contribute Code**: Submit pull requests to help fix issues or add features
+5. **Improve Documentation**: Help keep our documentation clear, accurate, and helpful
 
-If you find TorchDevice useful, please consider donating or sponsoring the project:
-
-[unixwzrd Patreon](https://www.patreon.com/unixwzrd)  
-[unixwzrd Ko-Fi](https://ko-fi.com/unixwzrd)  
-[unixwzrd Buy Me a Coffee](https://www.buymeacoffee.com/unixwzrd)
+For more information about the developer and other projects, visit [Distributed Thinking Systems](https://unixwzrd.ai).
 
 ## License
 
-```text
-  This project is licensed under the Apache License
-                  Version 2.0, License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-  Copyright 2025 Michael P. Sullivan - unixwzrd@unixwzrd.ai
+## Changelog
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-```
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.
