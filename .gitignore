@@ -303,7 +303,7 @@ node_modules/
 .master-planning
 bashexp*.txt
 output.txt
-.vscode
+.vscode/
 tmp
 *.wav
 test_projects/*
