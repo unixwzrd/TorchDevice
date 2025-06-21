@@ -63,16 +63,21 @@
   - [ ] Implement context managers for these operations
   - [ ] Ensure proper cleanup even in case of exceptions
 
-- [ ] **Implement Lazy Formatting for Log Messages**
-  - [ ] Identify places where f-strings are used for messages that might be filtered out
-  - [ ] Replace these with format strings that are only evaluated if the message will be logged
-  - [ ] Verify that the changes don't affect the log output
-  - [ ] Measure the performance impact of the change
+- [x] **Implement Lazy Formatting for Log Messages**
+  - [x] Identify places where f-strings are used for messages that might be filtered out
+  - [x] Replace these with format strings that are only evaluated if the message will be logged
+  - [x] Verify that the changes don't affect the log output
+  - [x] Measure the performance impact of the change
 
 - [ ] **Remove Unused Features and Code**
   - [ ] Identify unused code or overly complex sections
   - [ ] Simplify or remove these sections
   - [ ] Verify that the changes don't affect the functionality
+
+- [ ] **Reduce Default Logger Verbosity**
+  - [ ] Implement a log level configuration (e.g., via environment variable or function call).
+  - [ ] Change the default log level to be less verbose (e.g., INFO or WARNING).
+  - [ ] Ensure debug-level logging remains available for development.
 
 ## Device Handling Improvements
 
@@ -89,6 +94,15 @@
   - [ ] Provide finer-grained control over which operations respect the override
   - [ ] Optimize performance for CPU-specific operations
   - [ ] Add support for dynamic device allocation based on operation requirements
+
+## Test Automation & Documentation
+
+- [x] **Create Test Automation Framework**
+  - [x] Enhanced `generate_test_report.py` for better path resolution and clickable links.
+  - [x] Updated `test_automation/README.md` with setup and run instructions.
+- [x] **Update Project Documentation**
+  - [x] Added link to advanced test automation guide in main `README.md`.
+  - [x] Updated `CONTRIBUTING.md` with instructions for running external project tests.
 
 ## Test Framework Improvements
 
