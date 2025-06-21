@@ -111,6 +111,22 @@ When requesting features:
 - Provide examples of how it would be used
 - Discuss potential implementation approaches
 
+## External Project Tests
+
+Feel free to try other projects using TorchDevice. If you find issues, please report them as GitHub issues, or submit a patch with a fix in a PR.  I cannot guarantee that all projects will work, and I may not be able to get to every test project, but I appreciate the assistance in debugging and making this work better for the community.
+
+### PyTorch Transformers
+
+Checkout the [test_automation/README.md](test_automation/README.md) for instructions on running the PyTorch Transformers test suite. For how to manage external projects, see [Managing Test Target Projects](#managing-test-target-projects).
+
+to run the transformers tests, use:
+
+```bash
+time ( for projectgroup in $( (cd test_projects/transformers/tests; /usr/local/bin/ls -l | grep -v .py  | grep -v __ | awk '{print $NF}' ) ); do python test_automation/run_transformer_tests.py --project_root test_projects/transformers $projectgroup; done ) 2>1 | tee output.log
+```
+
+To run the all the tests it takes about 1 hour and 30 minutes.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the project's MIT License.
