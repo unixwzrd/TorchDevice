@@ -292,19 +292,24 @@ $RECYCLE.BIN/
 *.msp
 
 # Windows shortcuts
-# !test_automation/logs/*.log
-# !test_automation/logs/transformers/*/*/*
-# !test_automation/reports/*
-# !test_automation/reports/*/*
+.cursor
+.cursorignore
+.cursorrules
+.DS_Store
 .master-planning
 .project-planning
 .project-planning/
 .vscode
+.windsurfrules
 *.bak*
+*.code-workspace
 *.lnk
 *.wav
 *.wav
-*.code-workspace
+# !test_automation/logs/*.log
+# !test_automation/logs/transformers/*/*/*
+# !test_automation/reports/*
+# !test_automation/reports/*/*
 backup/
 bashexp*.txt
 custom-tts/
@@ -319,4 +324,3 @@ torchdevice_tts_final_patch.txt
 torchdevice_tts_patch.txt
 torchdevice_tts_pr_patch.txt
 TorchDevice.original
-.DS_Store
