@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.5.2 - 2025-06-21
+
+### Cleanup, Documentation, and Test Results
+
+### Added
+
+- **Test Automation Framework (`test_automation/`)**:
+  - Enhanced `generate_test_report.py` script to improve test file path resolution and clickable links in the Markdown report.
+  - Updated `test_automation/README.md` with instructions for setting up and running the Transformers test suite.
+  - Updated [README](README.md) with a link to the advanced test automation guide.
+  - Updated [CONTRIBUTING](CONTRIBUTING.md) with instructions for running external tests.
+
 ## 0.5.1 - 2025-06-20
 
 ### Improved
