@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.5.1 - 2025-06-20
+
+### Improved
+
+- **Test Reporting**:
+  - Enhanced the `generate_test_report.py` script to make test file paths in the Markdown report clickable, improving navigation from the report directly to the source code.
+  - Corrected relative link paths to ensure they resolve correctly from the report's location in `test_automation/reports/`.
+- **Documentation**:
+  - Updated `test_automation/README.md` with a new section detailing required system-level dependencies (Tesseract, image libraries) for running the full Transformers test suite.
+  - Added a link in the main project `README.md` pointing to the advanced test automation guide for better discoverability.
+
+
 ## 0.4.2 - 2025-06-08
 
 ### Added

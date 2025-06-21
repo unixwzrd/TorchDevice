@@ -292,24 +292,31 @@ $RECYCLE.BIN/
 *.msp
 
 # Windows shortcuts
-*.lnk
-test_projects/cuda-pytorch-template
-.project-planning/
-test_projects/
-backup/
-*.bak*
-node_modules/
-.project-planning
+# !test_automation/logs/*.log
+# !test_automation/logs/transformers/*/*/*
+# !test_automation/reports/*
+# !test_automation/reports/*/*
 .master-planning
-bashexp*.txt
-output.txt
+.project-planning
+.project-planning/
 .vscode
-tmp
+*.bak*
+*.lnk
 *.wav
-test_projects/*
-test_projects/custom-tts/samples/cpu_output.wav
+*.wav
+*.code-workspace
+backup/
+bashexp*.txt
 custom-tts/
+node_modules/
+output.txt
+test_projects/
+test_projects/*
+test_projects/cuda-pytorch-template
+test_projects/custom-tts/samples/cpu_output.wav
+tmp
 torchdevice_tts_final_patch.txt
-torchdevice_tts_pr_patch.txt
 torchdevice_tts_patch.txt
-*.wav
+torchdevice_tts_pr_patch.txt
+TorchDevice.original
+.DS_Store
