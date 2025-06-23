@@ -5,7 +5,7 @@ This module enables seamless code portability between NVIDIA CUDA, Apple Silicon
 and CPU hardware for PyTorch applications.
 """
 
-__version__ = '0.4.2'
+__version__ = '0.5.3'
 
 from .core.logger import log_info, auto_log
 from .core import patch
