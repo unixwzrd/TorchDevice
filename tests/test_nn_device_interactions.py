@@ -7,7 +7,7 @@ import unittest
 import sys
 from transformers import BertModel, BertTokenizer
 import TorchDevice
-from tests.common.test_utils import PrefixedTestCase, diff_check
+from tests.common.testing_utils import PrefixedTestCase, diff_check
 
 
 class TestNNDeviceInteractions(PrefixedTestCase):

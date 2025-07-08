@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import torch
-from common.test_utils import PrefixedTestCase, set_deterministic_seed
+from common.testing_utils import PrefixedTestCase, set_deterministic_seed
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 
 import TorchDevice  # Import TorchDevice to ensure CUDA redirection is set up

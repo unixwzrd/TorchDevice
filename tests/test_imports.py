@@ -66,7 +66,7 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(mps)
         self.assertIsNotNone(sync)
 
-    def test_utils_imports(self):
+    def test_testing_utils_imports(self):
         """Test that utility modules import correctly."""
         from TorchDevice.utils import (
             compile, device_utils, error_handling,

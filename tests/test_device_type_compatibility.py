@@ -9,7 +9,7 @@ import sys
 import torch
 # Import TorchDevice to apply patches
 import TorchDevice  # noqa: F401
-from common.test_utils import PrefixedTestCase, set_deterministic_seed
+from common.testing_utils import PrefixedTestCase, set_deterministic_seed
 
 
 # Define a fixed seed for reproducible tests

@@ -9,7 +9,7 @@ import sys
 import torch
 from pathlib import Path
 
-from common.test_utils import PrefixedTestCase
+from common.testing_utils import PrefixedTestCase
 from common.log_diff import setup_log_capture, teardown_log_capture
 
 

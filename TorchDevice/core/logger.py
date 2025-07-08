@@ -57,23 +57,26 @@ _INTERNAL_LOG_SKIP = {
 _log_lock = threading.Lock()
 _in_device_op = threading.local()
 
+
 def _init_thread_locals() -> None:
     """Initializes thread-local variables."""
     if not hasattr(_in_device_op, 'value'):
         _in_device_op.value = False
 
-# --- Core Logger Implementation ---
 
+# --- Core Logger Implementation ---
 class UnbufferedStreamHandler(logging.StreamHandler):
     """A stream handler that flushes after every emit."""
     def emit(self, record: logging.LogRecord) -> None:
         super().emit(record)
         self.flush()
 
+
 class TorchDeviceSimpleFormatter(logging.Formatter):
     """A simple formatter for general log messages."""
     def format(self, record: logging.LogRecord) -> str:
         return f"TorchDevice {record.levelname} - [{os.path.basename(record.filename)}:{record.lineno}] - {record.getMessage()}"
+
 
 class TorchDeviceRedirectFormatter(logging.Formatter):
     """A formatter for GPU redirect logs with detailed, accurate caller info."""
@@ -110,6 +113,7 @@ _redirect_logger.propagate = False
 _general_handler = None
 _redirect_handler = None
 _redirect_file_handler = None
+
 
 def _setup_handlers():
     """Create and configure handlers for both loggers."""
@@ -150,13 +154,16 @@ def log_internal(message: str, *args: Any) -> None:
     """Logs a message at the INTERNAL level."""
     _logger.log(INTERNAL, message, *args, stacklevel=2)
 
+
 def log_info(message: str, *args: Any) -> None:
     """Logs a message at the INTERNAL level."""
     _logger.log(INTERNAL, message, *args, stacklevel=2)
 
+
 def log_warning(message: str, *args: Any) -> None:
     """Logs a message at the WARNING level."""
     _logger.warning(message, *args, stacklevel=2)
+
 
 def log_error(message: str, *args: Any) -> None:
     """Logs a message at the ERROR level."""
@@ -165,8 +172,10 @@ def log_error(message: str, *args: Any) -> None:
 # --- Helper Functions for Decorator ---
 F = TypeVar('F', bound=Callable[..., Any])
 
+
 def _is_tensor(obj: Any) -> bool:
     return isinstance(obj, torch.Tensor)
+
 
 def _safe_repr(obj: Any) -> str:
     if _is_tensor(obj):
@@ -175,6 +184,7 @@ def _safe_repr(obj: Any) -> str:
         return repr(obj)
     except Exception:
         return f"<repr-error: {type(obj).__name__}>"
+
 
 def _truncate_long_string(s: str, context: str, max_lines: int = 15, head_size: int = 5, tail_size: int = 5) -> str:
     """Truncates a multi-line string if it exceeds max_lines."""
@@ -189,6 +199,7 @@ def _truncate_long_string(s: str, context: str, max_lines: int = 15, head_size: 
         truncated_s += '\n'.join(tail)
         return truncated_s
     return s
+
 
 def _format_call_args(func: Callable, *args: Any, **kwargs: Any) -> str:
     """Formats the function's arguments into a string, truncating long ones."""
@@ -208,6 +219,7 @@ def _format_call_args(func: Callable, *args: Any, **kwargs: Any) -> str:
         kwarg_strs = [f"{k}={_truncate_long_string(_safe_repr(v), 'ARGUMENTS')}" for k, v in kwargs.items()]
         return f"{func.__name__}({', '.join(arg_strs + kwarg_strs)})"
 
+
 def _format_result(result: Any) -> str:
     """Formats the function's result into a string, truncating it if it's too long."""
     return _truncate_long_string(_safe_repr(result), 'RESULT')
@@ -223,6 +235,7 @@ def device_operation_context() -> ContextManager[None]:
         yield
     finally:
         _in_device_op.value = original_value
+
 
 # --- Decorator ---
 def auto_log() -> Callable[[F], F]:
@@ -296,6 +309,7 @@ def auto_log() -> Callable[[F], F]:
                 _in_device_op.value = False
         return wrapper
     return decorator
+
 
 # --- Module Initialization ---
 _setup_handlers()  # Initial setup

@@ -13,7 +13,7 @@ import torch
 import TorchDevice
 
 try:
-    from common.test_utils import PrefixedTestCase, set_deterministic_seed, devices_equivalent
+    from common.testing_utils import PrefixedTestCase, set_deterministic_seed, devices_equivalent
     HAS_DETERMINISTIC = True
 except ImportError:
     PrefixedTestCase = unittest.TestCase

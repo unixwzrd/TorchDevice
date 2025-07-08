@@ -11,7 +11,7 @@ from pathlib import Path
 
 # Import from common test utilities
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
-from common.test_utils import PrefixedTestCase, devices_equivalent
+from common.testing_utils import PrefixedTestCase, devices_equivalent
 
 # Configure logging
 logging.basicConfig(

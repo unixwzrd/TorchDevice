@@ -107,7 +107,7 @@
 ## Test Framework Improvements
 
 - [ ] **Refine Test Utilities into Proper Modules**
-  - [ ] Resolve import issues with common.log_diff and common.test_utils
+  - [ ] Resolve import issues with common.log_diff and common.testing_utils
   - [ ] Restructure as proper Python modules with __init__.py files
   - [ ] Update import paths in all test files
   - [ ] Add proper documentation for all test utility functions

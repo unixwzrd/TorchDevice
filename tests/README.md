@@ -28,7 +28,7 @@ tests/
 │   └── test_type_utils.py # Type utility tests
 │
 ├── common/               # Shared test infrastructure
-│   ├── test_utils.py    # Common test utilities
+│   ├── testing_utils.py    # Common test utilities
 │   └── log_diff.py      # Log comparison tools
 │
 └── integration/         # Integration tests
@@ -64,7 +64,7 @@ python run_tests_and_install.py --test-only --update-expected tests/core/test_de
 Use `PrefixedTestCase` as your base class:
 
 ```python
-from tests.common.test_utils import PrefixedTestCase
+from tests.common.testing_utils import PrefixedTestCase
 
 class TestDeviceHandling(PrefixedTestCase):
     def setUp(self):
@@ -113,7 +113,7 @@ class TestDeviceHandling(PrefixedTestCase):
 ### Example Test
 
 ```python
-from tests.common.test_utils import PrefixedTestCase
+from tests.common.testing_utils import PrefixedTestCase
 import torch
 import TorchDevice
 

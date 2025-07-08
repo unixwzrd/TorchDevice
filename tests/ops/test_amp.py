@@ -8,7 +8,7 @@ import unittest
 import torch
 import TorchDevice # This will trigger patches
 import torch.backends.mps # For checking MPS availability
-from tests.common.test_utils import PrefixedTestCase # set_deterministic_seed is called by PrefixedTestCase.setUp
+from tests.common.testing_utils import PrefixedTestCase # set_deterministic_seed is called by PrefixedTestCase.setUp
 
 # Helper model for testing AMP
 class SimpleModel(torch.nn.Module):
@@ -75,15 +75,14 @@ class TestAutomaticMixedPrecision(PrefixedTestCase):
                 output_tensor_inside_autocast = model(input_tensor)
                 self.info(f"Inside autocast, AFTER model call: model.linear.weight.dtype: {model.linear.weight.dtype}")
                 self.info(f"Inside autocast, output_tensor_inside_autocast.dtype: {output_tensor_inside_autocast.dtype}")
-                if expected_op_dtype_inside_autocast:
-                    self.assertEqual(output_tensor_inside_autocast.dtype, expected_op_dtype_inside_autocast)
-                output_tensor_after_autocast_block = output_tensor_inside_autocast # Assign here for use outside
+                self.assertEqual(output_tensor_inside_autocast.dtype, expected_op_dtype_inside_autocast, "Output tensor inside autocast should have the expected low-precision dtype")
+                output_tensor_after_autocast_block = output_tensor_inside_autocast
 
-            self.info(f"After autocast block: model.linear.weight.dtype: {model.linear.weight.dtype}, input_tensor.dtype: {input_tensor.dtype}")
             if output_tensor_after_autocast_block is not None:
                 self.info(f"After autocast block, output_tensor_after_autocast_block.dtype: {output_tensor_after_autocast_block.dtype}")
-                # The output tensor will retain the dtype it had when created inside the autocast context.
                 self.assertEqual(output_tensor_after_autocast_block.dtype, expected_op_dtype_inside_autocast, "Output tensor should retain its dtype from within the autocast context")
+                self.info(f"After autocast block: model.linear.weight.dtype: {model.linear.weight.dtype}")
+                self.assertEqual(model.linear.weight.dtype, torch.float32, "Model weights should remain float32 after autocast.")
             else:
                 self.fail("output_tensor_after_autocast_block was not assigned, error likely occurred inside autocast.")
 

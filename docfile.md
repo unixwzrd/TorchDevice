@@ -292,7 +292,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 
 - **Created Common Test Utilities Directory**
   - Added `tests/common/` directory to house shared test infrastructure
-  - Implemented `test_utils.py` with the `PrefixedTestCase` class providing standardized logging capabilities
+  - Implemented `testing_utils.py` with the `PrefixedTestCase` class providing standardized logging capabilities
   - Moved `log_diff.py` to common location for reuse across all test modules
   - Standardized test setup and teardown procedures across all tests
   - Improved test discoverability and organization
@@ -314,7 +314,7 @@ Please report any issues or unexpected behavior through the issue tracker.
 
 ### Test Framework Improvements
 
-- Created a robust test framework with a `PrefixedTestCase` class in `test_utils.py`
+- Created a robust test framework with a `PrefixedTestCase` class in `testing_utils.py`
 - Fixed test discovery and execution to ensure consistent environment variables
 - Improved logging during tests with better context and error handling
 - Enhanced expected output file management for more reliable test results
@@ -603,7 +603,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.# Tor
 ## Test Framework Improvements
 
 - [ ] **Refine Test Utilities into Proper Modules**
-  - [ ] Resolve import issues with common.log_diff and common.test_utils
+  - [ ] Resolve import issues with common.log_diff and common.testing_utils
   - [ ] Restructure as proper Python modules with __init__.py files
   - [ ] Update import paths in all test files
   - [ ] Add proper documentation for all test utility functions
@@ -1710,7 +1710,7 @@ tests/
 │   └── test_type_utils.py # Type utility tests
 │
 ├── common/               # Shared test infrastructure
-│   ├── test_utils.py    # Common test utilities
+│   ├── testing_utils.py    # Common test utilities
 │   └── log_diff.py      # Log comparison tools
 │
 └── integration/         # Integration tests
@@ -1746,7 +1746,7 @@ python run_tests_and_install.py --test-only --update-expected tests/core/test_de
 Use `PrefixedTestCase` as your base class:
 
 ```python
-from tests.common.test_utils import PrefixedTestCase
+from tests.common.testing_utils import PrefixedTestCase
 
 class TestDeviceHandling(PrefixedTestCase):
     def setUp(self):
@@ -1795,7 +1795,7 @@ class TestDeviceHandling(PrefixedTestCase):
 ### Example Test
 
 ```python
-from tests.common.test_utils import PrefixedTestCase
+from tests.common.testing_utils import PrefixedTestCase
 import torch
 import TorchDevice
 

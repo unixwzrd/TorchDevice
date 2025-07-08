@@ -9,7 +9,7 @@ import unittest
 import sys
 from typing import List, Tuple, Union, Type, Any, Optional
 import torch
-from common.test_utils import PrefixedTestCase
+from common.testing_utils import PrefixedTestCase
 
 # Import TorchDevice to ensure CUDA redirection is set up
 import TorchDevice

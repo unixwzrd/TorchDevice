@@ -5,23 +5,24 @@ Core patching functionality and orchestration.
 """
 
 import functools
-import inspect
-import logging
+import importlib
 import threading
 from typing import Callable, TypeVar, Any
 import torch
 
-from .logger import log_info, auto_log
-from . import device # Import device directly
+from .logger import log_info
+from . import device  # Import device directly
 from . import tensors as core_tensors
 from . import modules as core_modules
 from .device import DeviceManager
+from .config import is_bypass_active, bypass_argument_processing, ARGUMENT_PROCESSING_EXCLUSIONS
 
 # Thread-local guard to prevent re-entry into the tensor creation wrapper
 _in_tensor_creation_wrapper = threading.local()
 
 # Define tensor_creation_wrapper before importing ops modules to avoid circular imports
 T = TypeVar('T')
+
 
 def tensor_creation_wrapper(func: Callable[..., T]) -> Callable[..., T]:
     """Wrapper for tensor creation functions to enforce default device redirection and CPU override.
@@ -30,6 +31,10 @@ def tensor_creation_wrapper(func: Callable[..., T]) -> Callable[..., T]:
     """
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
+        # If bypass is active, call the original function without redirection.
+        if is_bypass_active():
+            return func(*args, **kwargs)
+
         # Initialize thread-local if not present
         if not hasattr(_in_tensor_creation_wrapper, 'value'):
             _in_tensor_creation_wrapper.value = False
@@ -37,12 +42,12 @@ def tensor_creation_wrapper(func: Callable[..., T]) -> Callable[..., T]:
         # If we are already in a tensor creation wrapper, pass through to avoid nested logging.
         if _in_tensor_creation_wrapper.value:
             return func(*args, **kwargs)
-        
+
         _in_tensor_creation_wrapper.value = True
         try:
             # Get the original device argument (if any) for logging and processing
             device_arg_original = kwargs.get('device', None)
-            
+
             final_device_obj: torch.device
             if device_arg_original is None:
                 # No device specified by user, get the current effective device from DeviceManager
@@ -50,14 +55,10 @@ def tensor_creation_wrapper(func: Callable[..., T]) -> Callable[..., T]:
             else:
                 # User specified a device, let DeviceManager process it (handles 'cpu:-1', redirection, etc.)
                 final_device_obj = DeviceManager.torch_device_replacement(device_arg_original)
-            
+
             # Update kwargs with the definitively determined device object
             # This final_device_obj is the one that will be passed to the original PyTorch function
             kwargs['device'] = final_device_obj
-            
-            # The logging is now handled by the @auto_log decorator on torch_device_replacement.
-            # The custom logging logic previously here was redundant and has been removed.
-
             return func(*args, **kwargs)
         finally:
             _in_tensor_creation_wrapper.value = False
@@ -111,6 +112,7 @@ _TENSOR_CREATION_FUNCTIONS_TO_WRAP = [
     # '_sparse_coo_tensor_unsafe', '_sparse_csr_tensor_unsafe',
 ]
 
+
 def _apply_core_patches() -> None:
     """Apply core functionality patches."""
     global _core_patched
@@ -119,11 +121,11 @@ def _apply_core_patches() -> None:
         return
 
     log_info("Applying core patches...")
-    
+
     # 1. Apply device patches (torch.device, torch.load)
     log_info("  Applying device.apply_patches()...")
     device.apply_patches()
-    
+
     # 2. Apply tensor method patches (Tensor.to, Tensor.cuda, etc.)
     log_info("  Applying core_tensors.apply_patches()...")
     core_tensors.apply_patches()
@@ -131,7 +133,7 @@ def _apply_core_patches() -> None:
     # 3. Apply module method patches (Module.to, Module.cuda, etc.)
     log_info("  Applying core_modules.apply_patches()...")
     core_modules.apply_patches()
-    
+
     # 4. Apply tensor creation function wrappers (torch.tensor, torch.ones, etc.)
     log_info("  Applying tensor creation function wrappers...")
     for func_name in _TENSOR_CREATION_FUNCTIONS_TO_WRAP:
@@ -140,7 +142,7 @@ def _apply_core_patches() -> None:
             if callable(original_func):
                 if func_name not in _original_torch_creation_functions:
                     _original_torch_creation_functions[func_name] = original_func
-                
+
                 wrapped_func = tensor_creation_wrapper(original_func)
                 setattr(torch, func_name, wrapped_func)
                 # log_info("Patched torch.%s", func_name) # Can be verbose, enable if needed
@@ -162,11 +164,63 @@ def _apply_ops_patches() -> None:
         return
 
     # Import ops package here to ensure it's fully initialized before calling its apply_patches
-    from .. import ops 
+    from .. import ops
     log_info("Applying all operation package patches via ops.apply_patches()")
     ops.apply_patches() # Call the apply_patches from TorchDevice/ops/__init__.py
     _ops_patched = True
     log_info("All operation package patches applied")
+
+
+# A patch status for the bypass patches
+_bypass_patched = False
+
+
+def _apply_bypass_patches() -> None:
+    """Applies bypass wrappers to functions that need to avoid device redirection."""
+    global _bypass_patched
+    if _bypass_patched:
+        return
+
+    log_info("Applying argument processing bypass patches...")
+    for func_path in ARGUMENT_PROCESSING_EXCLUSIONS:
+        try:
+            module_path, func_name = func_path.rsplit('.', 1)
+            # Dynamically import the module
+            module = importlib.import_module(module_path)
+            original_func = getattr(module, func_name)
+
+            # Create a closure to correctly capture the original function in the loop
+            def make_wrapper(func_to_wrap):
+                @functools.wraps(func_to_wrap)
+                def wrapper(*args, **kwargs):
+                    # When this function is called, bypass all argument processing.
+                    with bypass_argument_processing():
+                        # Proactively move all tensor arguments to CPU
+                        new_args = []
+                        for arg in args:
+                            if isinstance(arg, torch.Tensor):
+                                new_args.append(arg.to('cpu'))
+                            else:
+                                new_args.append(arg)
+                        
+                        new_kwargs = {}
+                        for key, value in kwargs.items():
+                            if isinstance(value, torch.Tensor):
+                                new_kwargs[key] = value.to('cpu')
+                            else:
+                                new_kwargs[key] = value
+
+                        return func_to_wrap(*new_args, **new_kwargs)
+                    return wrapper
+
+            wrapped_func = make_wrapper(original_func)
+            setattr(module, func_name, wrapped_func)
+            log_info(f"  Applied bypass patch to {func_path}")
+        except (ImportError, AttributeError, ValueError) as e:
+            log_info(f"  Could not apply bypass patch to {func_path}: {e}")
+
+    _bypass_patched = True
+    log_info("Argument processing bypass patches applied.")
 
 
 def _apply_utils_patches() -> None:
@@ -193,16 +247,19 @@ def apply_patches() -> None:
     3. Utility patches (compile, device_utils, error_handling, type_utils)
     """
     log_info("Starting TorchDevice patch application")
-    
-    # 1. Core patches
+
+    # 1. Apply bypass patches first to wrap functions that need special handling.
+    _apply_bypass_patches()
+
+    # 2. Core patches
     _apply_core_patches()
-    
-    # 2. Operation patches
+
+    # 3. Operation patches
     _apply_ops_patches()
-    
-    # 3. Utility patches
+
+    # 4. Utility patches
     _apply_utils_patches()
-    
+
     log_info("TorchDevice patch application complete")
 
 
@@ -218,4 +275,4 @@ __all__: list[str] = [
     'tensor_creation_wrapper'
 ]
 
-log_info("TorchDevice core patch module initialized") 
+log_info("TorchDevice core patch module initialized")

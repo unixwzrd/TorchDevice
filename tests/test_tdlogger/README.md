@@ -6,9 +6,10 @@ This directory contains tests for the TDLogger module, which is responsible for 
 
 These tests use common utilities from the `tests/common/` directory:
 
-### common/test_utils.py
+### common/testing_utils.py
 
 Provides the `PrefixedTestCase` base class with:
+
 - Standard test setup and teardown procedures
 - Consistent test output formatting
 - Logging methods for test diagnostics
@@ -17,6 +18,7 @@ Provides the `PrefixedTestCase` base class with:
 ### common/log_diff.py
 
 Provides log capture and verification utilities:
+
 - `diff_check()`: Compares captured logs with expected output files
 - `setup_log_capture()`: Sets up logging for tests
 - `teardown_log_capture()`: Cleans up after tests
@@ -89,7 +91,7 @@ python run_tests_and_install.py --test-only tests/test_tdlogger/test_basic.py
 
 When adding new tests for TDLogger:
 
-1. Extend the `PrefixedTestCase` class from `common/test_utils.py`
+1. Extend the `PrefixedTestCase` class from `common/testing_utils.py`
 2. Use `setup_log_capture()` and `teardown_log_capture()` from `common/log_diff.py`
 3. Capture log output during test execution
 4. Use `diff_check()` to compare the captured output with expected results
@@ -98,7 +100,7 @@ When adding new tests for TDLogger:
 Example:
 
 ```python
-from common.test_utils import PrefixedTestCase
+from common.testing_utils import PrefixedTestCase
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 
 class TestMyFeature(PrefixedTestCase):
@@ -127,4 +129,4 @@ class TestMyFeature(PrefixedTestCase):
         self.info("Tests completed successfully")
         
         # Check the log output against expected
-        diff_check(self.log_capture) 
+        diff_check(self.log_capture)

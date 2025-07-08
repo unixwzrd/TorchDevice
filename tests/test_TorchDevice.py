@@ -6,7 +6,7 @@ import numpy as np
 
 import torch
 import TorchDevice
-from common.test_utils import PrefixedTestCase, devices_equivalent
+from common.testing_utils import PrefixedTestCase, devices_equivalent
 
 logging.basicConfig(
     level=logging.INFO, 

@@ -2,7 +2,7 @@ import torch
 
 # This import is all that's needed to trigger the patches
 import TorchDevice
-from tests.common.test_utils import PrefixedTestCase
+from tests.common.testing_utils import PrefixedTestCase
 
 
 class TestCudaMocking(PrefixedTestCase):

@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 import TorchDevice
-from tests.common.test_utils import PrefixedTestCase
+from tests.common.testing_utils import PrefixedTestCase
 
 # A simple function to be decorated by auto_log for testing
 # We are testing the logger, so we need to import the decorator

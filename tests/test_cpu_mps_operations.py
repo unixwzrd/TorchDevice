@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 import TorchDevice
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
-from common.test_utils import PrefixedTestCase, set_deterministic_seed, devices_equivalent
+from common.testing_utils import PrefixedTestCase, set_deterministic_seed, devices_equivalent
 
 # Configure logging
 logging.basicConfig(

@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Import from common test utilities
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
-from common.test_utils import PrefixedTestCase
+from common.testing_utils import PrefixedTestCase
 
 # Import TorchDevice to ensure CUDA redirection is set up
 import TorchDevice

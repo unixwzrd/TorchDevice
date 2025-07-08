@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Import TorchDevice - this should automatically patch torch
 import TorchDevice  # noqa
 from TorchDevice.core.device import DeviceManager
-from common.test_utils import PrefixedTestCase, set_deterministic_seed
+from common.testing_utils import PrefixedTestCase, set_deterministic_seed
 from common.log_diff import diff_check, setup_log_capture, teardown_log_capture
 
 # Configure logging

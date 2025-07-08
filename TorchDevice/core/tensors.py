@@ -10,6 +10,7 @@ from typing import Any, Callable, TypeVar
 from functools import wraps
 from .logger import log_info, auto_log
 from .device import DeviceManager, _ORIGINAL_TORCH_DEVICE_CLASS
+from .config import is_bypass_active
 
 
 # Original torch.Tensor function references - initialized during apply_patches
@@ -22,10 +23,12 @@ t_Tensor_numpy = None  # For torch.Tensor.numpy()
 
 @auto_log()
 def tensor_to_replacement(tensor, *args, **kwargs):
+    if is_bypass_active():
+        return t_Tensor_to(tensor, *args, **kwargs)
     """Replacement for torch.Tensor.to() that follows device redirection policy."""
     if t_Tensor_to is None:
         raise RuntimeError("tensor_to_replacement called before patches applied")
-        
+
     if not isinstance(tensor, torch.Tensor):
         raise TypeError(f"tensor_to_replacement called on non-tensor object: {type(tensor)}")
     if args and isinstance(args[0], (str, _ORIGINAL_TORCH_DEVICE_CLASS)):
@@ -44,7 +47,7 @@ def tensor_cuda_replacement(tensor, device=None, non_blocking=False, memory_form
     """Replacement for torch.Tensor.cuda() that follows device redirection policy."""
     if t_Tensor_cuda is None:
         raise RuntimeError("tensor_cuda_replacement called before patches applied")
-    
+
     device_spec = 'cuda' if device is None else f'cuda:{device}'
     device = DeviceManager.torch_device_replacement(device_spec)
     return t_Tensor_to(tensor, device, non_blocking=non_blocking, memory_format=memory_format)
@@ -55,7 +58,7 @@ def tensor_cpu_replacement(tensor):
     """Replacement for torch.Tensor.cpu() that follows device redirection policy."""
     if t_Tensor_cpu is None:
         raise RuntimeError("tensor_cpu_replacement called before patches applied")
-        
+
     device = DeviceManager.torch_device_replacement('cpu')
     return t_Tensor_to(tensor, device)
 
@@ -65,7 +68,7 @@ def tensor_mps_replacement(tensor, non_blocking=False, memory_format=torch.prese
     """Replacement for torch.Tensor.mps() that follows device redirection policy."""
     if t_Tensor_mps is None:
         raise RuntimeError("tensor_mps_replacement called before patches applied")
-    
+
     device = DeviceManager.torch_device_replacement('mps')
     return t_Tensor_to(tensor, device, non_blocking=non_blocking, memory_format=memory_format)
 
@@ -114,7 +117,7 @@ def tensor_creation_wrapper(original_func: Callable[..., T]) -> Callable[..., T]
             # Device specified, resolve it through DeviceManager.
             resolved_device = DeviceManager.torch_device_replacement(device_arg)
             kwargs['device'] = resolved_device
-        
+
         return original_func(*args, **kwargs)
 
     return wrapped_func
@@ -123,9 +126,9 @@ def tensor_creation_wrapper(original_func: Callable[..., T]) -> Callable[..., T]
 def apply_patches() -> None:
     """Apply torch.Tensor method patches."""
     log_info("Applying torch.Tensor method patches (to, cuda, cpu, mps, numpy)")
-    
+
     global t_Tensor_to, t_Tensor_cuda, t_Tensor_cpu, t_Tensor_mps, t_Tensor_numpy
-    
+
     if t_Tensor_to is None: # Check one, assume all tensor methods need init if this one does
         t_Tensor_to = torch.Tensor.to
         t_Tensor_cuda = torch.Tensor.cuda
@@ -134,15 +137,15 @@ def apply_patches() -> None:
         if hasattr(torch.Tensor, 'mps'):
             t_Tensor_mps = torch.Tensor.mps
         log_info("Original torch.Tensor methods stored")
-    
+
     torch.Tensor.to = tensor_to_replacement
     torch.Tensor.cuda = tensor_cuda_replacement
     torch.Tensor.cpu = tensor_cpu_replacement
     torch.Tensor.numpy = numpy_replacement # Patch numpy
-    
+
     if hasattr(torch.Tensor, 'mps') and t_Tensor_mps is not None:
         torch.Tensor.mps = tensor_mps_replacement
-        
+
     log_info("torch.Tensor method patches applied")
 
 
