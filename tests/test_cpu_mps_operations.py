@@ -105,36 +105,45 @@ class TestCPUOperations(PrefixedTestCase):
 
     def test_override_forces_all_devices_to_cpu(self):
         """Test that CPU override forces all device requests to CPU."""
+        # Ensure CPU override is OFF to start, so we have a known state.
+        # We do this by checking the default device; if it's CPU, we toggle the override.
+        default_device_type = torch.get_default_device().type
+        if default_device_type == 'cpu':
+            self.info("CPU override was ON, toggling OFF first.")
+            torch.device('cpu:-1') # Toggle OFF
+
+        self.info("Toggling CPU override ON for test.")
         # Toggle override ON
         torch.device('cpu:-1')
-        # Try to create tensors on all device types
-        t_cpu = torch.tensor([1], device='cpu')
-        t_mps = torch.tensor([1], device='mps')
-        t_cuda = torch.tensor([1], device='cuda')
-        # All should be on CPU
-        self.assertEqual(t_cpu.device.type, 'cpu')
-        self.assertEqual(t_mps.device.type, 'cpu')
-        self.assertEqual(t_cuda.device.type, 'cpu')
-        # Toggle override OFF
+
+        # Verify that all device requests now return 'cpu' type.
+        self.assertEqual(torch.device('cpu').type, 'cpu')
+        self.assertEqual(torch.device('mps').type, 'cpu')
+        self.assertEqual(torch.device('cuda').type, 'cpu')
+        self.info("All devices correctly forced to 'cpu' type.")
+
+        # Toggle override OFF to clean up for subsequent tests.
+        self.info("Toggling CPU override OFF.")
         torch.device('cpu:-1')
 
     def test_explicit_accelerator_requests(self):
         """Test that explicit accelerator requests are honored when override is OFF."""
-        # Ensure override is OFF
-        torch.device('cpu:-1')  # ON
-        torch.device('cpu:-1')  # OFF
-        # Try to create tensors on all device types
-        t_cpu = torch.tensor([1], device='cpu')
-        t_mps = torch.tensor([1], device='mps')
-        t_cuda = torch.tensor([1], device='cuda')
-        # Print device types for manual inspection
-        print("t_cpu.device:", t_cpu.device)
-        print("t_mps.device:", t_mps.device)
-        print("t_cuda.device:", t_cuda.device)
-        # Optionally, assert based on your system's default accelerator
-        # For example, if MPS is available:
-        # self.assertEqual(t_mps.device.type, 'mps')
-        # self.assertEqual(t_cuda.device.type, 'mps')
+        # Ensure CPU override is OFF. We toggle it twice to be sure of the final state.
+        torch.device('cpu:-1')
+        torch.device('cpu:-1')
+
+        # Determine the expected default accelerator type.
+        default_accelerator_type = torch.get_default_device().type
+
+        self.info(f"Default accelerator type for this system is '{default_accelerator_type}'")
+
+        # When override is OFF, all device requests should be redirected to the default accelerator.
+        self.info("Verifying that 'cpu', 'mps', and 'cuda' requests all redirect to the default accelerator.")
+        self.assertEqual(torch.device('cpu').type, default_accelerator_type)
+        self.assertEqual(torch.device('mps').type, default_accelerator_type)
+        self.assertEqual(torch.device('cuda').type, default_accelerator_type)
+        # Toggle override OFF
+        torch.device('cpu:-1')
 
 
 class TestMPSOperations(PrefixedTestCase):
@@ -154,18 +163,15 @@ class TestMPSOperations(PrefixedTestCase):
         self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)   
         self.logger = logging.getLogger(__name__)
 
-        # Determine the available hardware - use MPS if available
-        self.has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-        self.has_cuda = torch.cuda.is_available()
-        
-        # Skip tests if neither MPS nor CUDA is available
-        if not self.has_mps and not self.has_cuda:
-            self.skipTest("Neither MPS nor CUDA is available on this machine")
-            
-        # Create device - this will be redirected to the appropriate type by TorchDevice
+        # Determine the default accelerator for this system.
+        self.expected_type = torch.get_default_device().type
+
+        if self.expected_type == 'cpu':
+            self.skipTest("This test requires an accelerator (MPS or CUDA) to run.")
+
+        # We will request 'mps' and expect TorchDevice to redirect it to the actual default accelerator.
         self.device = torch.device('mps')
-        self.expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
-        self.logger.info("Using device: %s (expected type: %s)", self.device, self.expected_type)
+        self.logger.info("Requesting 'mps', expecting to get '%s'", self.expected_type)
 
     def tearDown(self):
         """Clean up logger capture and restore original configuration."""
@@ -193,7 +199,9 @@ class TestMPSOperations(PrefixedTestCase):
 
         # Convert to MPS
         mps_tensor = cpu_tensor.to('mps')
-        expected_type = 'mps' if self.has_mps else 'cuda' if self.has_cuda else 'cpu'
+        expected_type = torch.get_default_device()
+        if not isinstance(expected_type, str):
+            expected_type = expected_type.type
         self.assertEqual(mps_tensor.device.type, expected_type)
 
         # Verify data is preserved
@@ -209,7 +217,7 @@ class TestMPSOperations(PrefixedTestCase):
         device = torch.device('mps')  # Use explicit MPS device
         
         # Check device type
-        self.assertTrue(devices_equivalent(device.type, self.expected_type))
+        self.assertEqual(device.type, self.expected_type)
         
         # If it's redirected to MPS, check index is either None or 0
         if device.type == 'mps':

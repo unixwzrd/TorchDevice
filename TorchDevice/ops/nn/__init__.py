@@ -4,7 +4,7 @@ TorchDevice Neural Network Operations Module
 Neural network operations and layers.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 from . import (
     containers,
     layers,

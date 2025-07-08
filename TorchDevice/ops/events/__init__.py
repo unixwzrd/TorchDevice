@@ -4,7 +4,7 @@ TorchDevice Events Operations Module
 Event management and synchronization.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 from . import cuda, mps, sync
 
 log_info("Initializing TorchDevice events module")

@@ -9,8 +9,8 @@ import torch
 from typing import Optional, Any, Type # Added Type
 import time # Added time
 
-from TorchDevice.core.logger import log_info, auto_log
-from TorchDevice.core.device import DeviceManager # Added DeviceManager
+from ...core.logger import log_info, auto_log
+from ...core.device import DeviceManager # Added DeviceManager
 
 # --- Base Class Resolution Helper (from original streams.py) ---
 def _get_event_base() -> Type:
@@ -44,9 +44,9 @@ class t_cuda_Event(_EventBase): # type: ignore
                 try: # Older PyTorch might not take these in _EventBase init
                     super().__init__()
                 except Exception as e_super:
-                    log_warning(f"[TORCHDEVICE] Error calling _EventBase.__init__ for t_cuda_Event: {e_super}") 
+                    log_warning("[TORCHDEVICE] Error calling _EventBase.__init__ for t_cuda_Event: %s", e_super) 
             except Exception as e:
-                log_warning(f"[TORCHDEVICE] Error calling _EventBase.__init__ with args for t_cuda_Event: {e}")
+                log_warning("[TORCHDEVICE] Error calling _EventBase.__init__ with args for t_cuda_Event: %s", e)
 
         actual_device_str = DeviceManager.get_default_device() if device is None else device
         self._device: torch.device = torch.device(DeviceManager.torch_device_replacement(actual_device_str))
@@ -68,7 +68,7 @@ class t_cuda_Event(_EventBase): # type: ignore
     def record(self, stream: Optional['torch.cuda.Stream'] = None) -> None: 
         if stream is not None:
              if self.device != stream.device: # type: ignore
-                 log_warning(f"[TORCHDEVICE] Event ({self.device}) and recording stream ({stream.device}) device mismatch on record.") # type: ignore
+                 log_warning("[TORCHDEVICE] Event (%s) and recording stream (%s) device mismatch on record.", self.device, stream.device) # type: ignore
         self._stream = stream 
 
         self._recorded = True
@@ -100,7 +100,7 @@ class t_cuda_Event(_EventBase): # type: ignore
         if self._record_time is None or end_event._record_time is None:
             raise RuntimeError("Internal error: record time not set despite timing enabled and event recorded.")
         if self._device != end_event._device:
-            log_warning(f"[TORCHDEVICE] elapsed_time called on events from different devices: {self._device} vs {end_event._device}")
+            log_warning("[TORCHDEVICE] elapsed_time called on events from different devices: %s vs %s", self._device, end_event._device)
         
         return (end_event._record_time - self._record_time) * 1000.0
 
@@ -137,7 +137,7 @@ def current_event() -> Optional[Any]:
          try:
             return torch.cuda.current_event()
          except Exception as e:
-            log_info(f"Error calling original torch.cuda.current_event: {e}") 
+            log_info("Error calling original torch.cuda.current_event: %s", e) 
     return None
 
 def apply_patches() -> None:

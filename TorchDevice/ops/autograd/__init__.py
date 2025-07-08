@@ -4,7 +4,7 @@ TorchDevice Autograd Operations Module
 Automatic differentiation operations.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 from . import function, variable, grad_mode
 
 log_info("Initializing TorchDevice autograd module")

@@ -4,7 +4,7 @@ TorchDevice Type Utilities Module
 Type checking and conversion utilities.
 """
 
-from TorchDevice.core.logger import log_info
+from ..core.logger import log_info
 
 log_info("Initializing TorchDevice type utils module")
 

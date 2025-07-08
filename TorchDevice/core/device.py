@@ -56,15 +56,22 @@ class DeviceManager:
         return cls._default_device
 
     @classmethod
+    def is_mps_available(cls) -> bool:
+        """Check if MPS is available and built."""
+        return hardware_info.is_native_mps_available()
+
+    @classmethod
     def cpu_override(cls):
         """Check if CPU override is active."""
         return cls._cpu_override
+
+
 
     @classmethod
     @auto_log()
     def _detect_default_device_type(cls):
         """Detect the best available device type."""
-        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        if cls.is_mps_available():
             cls._default_device_type = 'mps'
         elif torch.cuda.is_available() or torch.backends.cuda.is_built():
             cls._default_device_type = 'cuda'
@@ -117,10 +124,9 @@ class DeviceManager:
                         cls._cpu_override = True
                         cls._previous_default_device_type = cls._default_device_type
                         cls._default_device_type = 'cpu'
-
-            device_type = cls._default_device_type
-            result = cls.t_device(device_type, device_index)
-            return result
+        device_type = cls._default_device_type
+        result = cls.t_device(device_type, device_index)
+        return result
 
 
 class _TorchDevicePatcher:
@@ -145,7 +151,25 @@ def apply_patches() -> None:
     
     # Initialize default device using original mechanisms before patching torch.device globally.
     # DeviceManager.get_default_device() calls cls.t_device(), which is now correctly set.
-    DeviceManager.get_default_device() 
+    DeviceManager.get_default_device()
+
+    # Apply CUDA availability mocks if on MPS, after native device detection.
+    if DeviceManager.is_mps_available():
+        log_info("MPS device detected. Applying CUDA availability mocks.")
+        # Mock is_available and is_built to always return True, using getattr for safety
+        if not hasattr(torch.cuda, '_original_is_available'):
+            torch.cuda._original_is_available = getattr(torch.cuda, 'is_available', None)
+        torch.cuda.is_available = lambda: True
+
+        if not hasattr(torch.cuda, '_original_is_built'):
+            torch.cuda._original_is_built = getattr(torch.cuda, 'is_built', None)
+        torch.cuda.is_built = lambda: True
+
+        # Mock torch.version.cuda to a plausible version string
+        if not hasattr(torch.version, '_original_cuda'):
+            torch.version._original_cuda = getattr(torch.version, 'cuda', None)
+        torch.version.cuda = "11.8"  # A common, plausible version
+        log_info("CUDA availability mocks applied.")
     
     # Patch torch.device with our callable instance that also handles isinstance correctly.
     torch.device = _patcher_instance_for_torch_device

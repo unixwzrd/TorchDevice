@@ -9,8 +9,16 @@ import torch
 import numpy as np
 import random
 import logging
+import os
+import sys
 from pathlib import Path
-from common.log_diff import setup_log_capture, teardown_log_capture, diff_check
+from .log_diff import setup_log_capture, teardown_log_capture, diff_check
+
+# --- Test-only state management ---
+
+# Import internal components for test-specific setup
+from TorchDevice.core.logger import set_redirect_log_stream
+
 
 __all__ = ['PrefixedTestCase', 'diff_check', 'devices_equivalent', 'set_deterministic_seed']
 
@@ -55,35 +63,51 @@ def set_deterministic_seed(seed=42):
 
 
 class PrefixedTestCase(unittest.TestCase):
-    """
-    Base test case that provides logging capabilities with test name prefixes.
-    Also handles the log capture setup and teardown for test cases.
-    """
+    _test_dir = None
+
+    @classmethod
+    def setUpClass(cls):
+        # Determine the test directory once per class
+        cls._test_dir = Path(__file__).parent.parent.resolve()
 
     def setUp(self):
-        """Set up test environment and logger capture."""
+        super().setUp()
+        # Set up a log capture stream for each test
+        self.log_capture = setup_log_capture(self._testMethodName, self._test_dir)
+        self.logger = logging.getLogger(self._testMethodName)
+
+        # Set the redirect logger to output to our captured log file
+        set_redirect_log_stream(self.log_capture.log_stream)
+
         # Set deterministic seeds
         set_deterministic_seed()
-        
-        # Set up log capture for TDLogger
-        test_dir = Path(__file__).parent.parent
-        self.log_capture = setup_log_capture(self._testMethodName, test_dir)
-        self.logger = logging.getLogger(self._testMethodName) # Get the logger configured by setup_log_capture
-        
+
         # Print test header
         print("\n" + "=" * 80)
-        print(f"Starting test: {self._testMethodName}")
-        print("=" * 80)
+        self.logger.info(f"Starting test: {self.id()}")
+        print("-" * 80)
 
     def tearDown(self):
         """Clean up logger capture and restore original configuration."""
-        if hasattr(self, 'log_capture'):
-            teardown_log_capture(self.log_capture)
-        
         # Print a footer for the test
-        print("\n" + "=" * 80)
-        print(f"Finished test: {self._testMethodName}")
+        print("-" * 80)
+        self.logger.info(f"Finished test: {self.id()}")
         print("=" * 80)
+
+        if hasattr(self, 'log_capture'):
+            # Remove the test-specific log handler from the redirect logger.
+            # This ensures no more logs are written to the stream before diffing.
+            set_redirect_log_stream(None)
+
+            # First, perform the diff check or update the expected log file,
+            # but only if the expected file exists or we are in update mode.
+            if self.log_capture.expected_output_file.exists() or os.environ.get('TORCHDEVICE_UPDATE_EXPECTED') == '1':
+                diff_check(self.log_capture)
+
+            # Then, tear down the capture and restore the original logger.
+            teardown_log_capture(self.log_capture)
+
+        super().tearDown()
 
     def info(self, msg, *args, **kwargs):
         """

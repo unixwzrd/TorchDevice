@@ -16,7 +16,7 @@ t_is_variable = getattr(torch.autograd, 'is_variable', None)
 @auto_log()
 def Variable(data: Any, requires_grad: bool = False) -> Optional[Any]:
     """Create a variable that can have gradients."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = DeviceManager.get_default_device()
     if t_Variable:
         var = t_Variable(data, requires_grad=requires_grad)

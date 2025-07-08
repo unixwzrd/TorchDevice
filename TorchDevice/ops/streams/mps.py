@@ -6,7 +6,7 @@ MPS stream management and operations.
 
 import torch
 from typing import Optional, Any
-from TorchDevice.core.logger import log_info, auto_log
+from ...core.logger import log_info, auto_log
 
 # Store original functions if they exist (MPS might not have stream support yet)
 t_mps_current_stream = getattr(torch.mps, 'current_stream', None) if hasattr(torch, 'mps') else None
@@ -16,7 +16,7 @@ t_mps_default_stream = getattr(torch.mps, 'default_stream', None) if hasattr(tor
 @auto_log()
 def current_stream(device: Optional[torch.device] = None) -> Optional[Any]:
     """Get the current MPS stream."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'mps' and t_mps_current_stream:
         return t_mps_current_stream(device)
@@ -26,7 +26,7 @@ def current_stream(device: Optional[torch.device] = None) -> Optional[Any]:
 @auto_log()
 def default_stream(device: Optional[torch.device] = None) -> Optional[Any]:
     """Get the default MPS stream."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'mps' and t_mps_default_stream:
         return t_mps_default_stream(device)

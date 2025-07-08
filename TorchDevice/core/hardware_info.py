@@ -7,7 +7,7 @@ circular imports during early initialization.
 """
 
 import torch
-from ..core.logger import log_info # Assuming logger is safe and initialized early
+from .logger import log_info
 
 _is_pytorch_compiled_with_cuda_value = hasattr(torch._C, '_cuda_getDeviceCount')
 _is_native_cuda_available_value = torch.cuda.is_available() if _is_pytorch_compiled_with_cuda_value else False
@@ -15,11 +15,11 @@ _is_native_cuda_built_value = torch.backends.cuda.is_built() if hasattr(torch.ba
 _is_native_mps_available_value = torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False
 _is_native_mps_built_value = torch.backends.mps.is_built() if hasattr(torch.backends, 'mps') else False
 
-log_info(f"[HW_INFO] PyTorch compiled with CUDA: {_is_pytorch_compiled_with_cuda_value}")
-log_info(f"[HW_INFO] Native CUDA available: {_is_native_cuda_available_value}")
-log_info(f"[HW_INFO] Native CUDA built: {_is_native_cuda_built_value}")
-log_info(f"[HW_INFO] Native MPS available: {_is_native_mps_available_value}")
-log_info(f"[HW_INFO] Native MPS built: {_is_native_mps_built_value}")
+log_info("[HW_INFO] PyTorch compiled with CUDA: %s", _is_pytorch_compiled_with_cuda_value)
+log_info("[HW_INFO] Native CUDA available: %s", _is_native_cuda_available_value)
+log_info("[HW_INFO] Native CUDA built: %s", _is_native_cuda_built_value)
+log_info("[HW_INFO] Native MPS available: %s", _is_native_mps_available_value)
+log_info("[HW_INFO] Native MPS built: %s", _is_native_mps_built_value)
 
 def is_pytorch_compiled_with_cuda() -> bool:
     """Returns True if PyTorch was compiled with CUDA support (native check)."""

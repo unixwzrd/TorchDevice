@@ -5,8 +5,8 @@ Device management and utility functions.
 """
 
 import torch
-from TorchDevice.core.device import DeviceManager
-from TorchDevice.core.logger import log_info, auto_log
+from ..core.device import DeviceManager
+from ..core.logger import log_info, auto_log
 
 log_info("Initializing TorchDevice device utils module")
 

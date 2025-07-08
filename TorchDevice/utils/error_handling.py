@@ -4,7 +4,7 @@ TorchDevice Error Handling Module
 Error handling and exception utilities.
 """
 
-from TorchDevice.core.logger import log_info
+from ..core.logger import log_info
 
 log_info("Initializing TorchDevice error handling module")
 

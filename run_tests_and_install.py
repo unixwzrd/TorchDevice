@@ -48,6 +48,10 @@ def run_test_file(test_file: Path, update_expected: bool) -> bool:
     """
     env = os.environ.copy()
     
+    # Set the environment variable to signal log_diff.py to update expected logs.
+    if update_expected:
+        env['TORCHDEVICE_UPDATE_EXPECTED'] = '1'
+    
     # Add the tests directory to PYTHONPATH so that "common" can be imported.
     tests_dir = PROJECT_ROOT / "tests"
     current_pythonpath = env.get("PYTHONPATH", "")
@@ -70,9 +74,11 @@ def run_test_file(test_file: Path, update_expected: bool) -> bool:
     except Exception as e:
         logger.warning(f"Could not read {test_file} to check for pytest: {e}")
 
-    if update_expected and is_pytest_file:
-        # Append the flag so that the test file's sys.argv contains it.
-        cmd.append("--update-expected")
+    # The logic is now handled by the environment variable, so we don't need
+    # to pass the command-line flag to the subprocess anymore.
+    # if update_expected and is_pytest_file:
+    #     # Append the flag so that the test file's sys.argv contains it.
+    #     cmd.append("--update-expected")
     
     logger.info(f"Running test file: {test_file}")
     logger.info(f"Running command: {cmd}")

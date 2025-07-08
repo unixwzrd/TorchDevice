@@ -4,7 +4,7 @@ TorchDevice Neural Network Attention Module
 Attention mechanism implementations.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 
 log_info("Initializing TorchDevice nn attention module")
 

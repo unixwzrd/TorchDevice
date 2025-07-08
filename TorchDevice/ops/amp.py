@@ -38,7 +38,7 @@ class GradScalerReplacement(torch.amp.GradScaler):
         
         effective_kwargs = kwargs.copy()
         if current_device_type != 'cuda':
-            log_info(f"[AMP] Non-CUDA device ('{current_device_type}') detected. Disabling GradScaler.")
+            log_info("[AMP] Non-CUDA device ('%s') detected. Disabling GradScaler.", current_device_type)
             effective_kwargs['enabled'] = False
             # Set device to CPU to avoid issues if GradScaler tries to use CUDA context by default
             if 'device' not in effective_kwargs:

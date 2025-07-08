@@ -6,7 +6,7 @@ Memory usage tracking and statistics.
 
 import torch
 from typing import Optional
-from TorchDevice.core.logger import log_info, auto_log
+from ...core.logger import log_info, auto_log
 
 # Store original functions
 t_cuda_memory_allocated = torch.cuda.memory_allocated if hasattr(torch.cuda, 'memory_allocated') else None
@@ -29,7 +29,7 @@ t_cuda_memory_summary = torch.cuda.memory_summary if hasattr(torch.cuda, 'memory
 @auto_log()
 def memory_allocated(device: Optional[torch.device] = None) -> int:
     """Return the current GPU memory occupied by tensors in bytes."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_memory_allocated:
         return t_cuda_memory_allocated(device)
@@ -41,7 +41,7 @@ def memory_allocated(device: Optional[torch.device] = None) -> int:
 @auto_log()
 def memory_reserved(device: Optional[torch.device] = None) -> int:
     """Return the current GPU memory managed by the caching allocator in bytes."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_memory_reserved:
         return t_cuda_memory_reserved(device)
@@ -53,7 +53,7 @@ def memory_reserved(device: Optional[torch.device] = None) -> int:
 @auto_log()
 def max_memory_allocated(device: Optional[torch.device] = None) -> int:
     """Return the maximum GPU memory occupied by tensors in bytes."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_max_memory_allocated:
         return t_cuda_max_memory_allocated(device)
@@ -65,7 +65,7 @@ def max_memory_allocated(device: Optional[torch.device] = None) -> int:
 @auto_log()
 def max_memory_reserved(device: Optional[torch.device] = None) -> int:
     """Return the maximum GPU memory managed by the caching allocator in bytes."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_max_memory_reserved:
         return t_cuda_max_memory_reserved(device)
@@ -77,7 +77,7 @@ def max_memory_reserved(device: Optional[torch.device] = None) -> int:
 @auto_log()
 def reset_peak_memory_stats(device: Optional[torch.device] = None) -> None:
     """Reset the peak memory stats for a given device. No-op for MPS."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_reset_peak_memory_stats:
         t_cuda_reset_peak_memory_stats(device)
@@ -88,7 +88,7 @@ def reset_peak_memory_stats(device: Optional[torch.device] = None) -> None:
 @auto_log()
 def reset_accumulated_memory_stats(device: Optional[torch.device] = None) -> None:
     """Reset the accumulated memory stats for a given device. No-op for MPS."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_reset_accumulated_memory_stats:
         t_cuda_reset_accumulated_memory_stats(device)
@@ -99,7 +99,7 @@ def reset_accumulated_memory_stats(device: Optional[torch.device] = None) -> Non
 @auto_log()
 def mem_get_info(device: Optional[torch.device] = None) -> tuple[int, int]:
     """Return the free and total GPU memory. (free, total)"""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_mem_get_info:
         return t_cuda_mem_get_info(device)
@@ -113,7 +113,7 @@ def mem_get_info(device: Optional[torch.device] = None) -> tuple[int, int]:
 @auto_log()
 def memory_stats(device: Optional[torch.device] = None) -> dict[str, int]:
     """Return a dictionary of memory statistics."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_memory_stats:
         return t_cuda_memory_stats(device)
@@ -152,7 +152,7 @@ def memory_stats(device: Optional[torch.device] = None) -> dict[str, int]:
 @auto_log()
 def memory_summary(device: Optional[torch.device] = None, abbreviated: bool = False) -> str:
     """Return a human-readable memory summary."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_memory_summary:
         return t_cuda_memory_summary(device, abbreviated=abbreviated)

@@ -4,7 +4,7 @@ TorchDevice Device Operations Module
 Device-specific operations and patches.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 from . import cuda, mps, cpu
 
 log_info("Initializing TorchDevice device operations module")
@@ -14,7 +14,6 @@ def apply_patches() -> None:
     log_info("Applying device operation patches")
     cuda.apply_patches()
     mps.apply_patches()
-    cpu.apply_patches()
     log_info("Device operation patches applied")
 
 __all__: list[str] = [

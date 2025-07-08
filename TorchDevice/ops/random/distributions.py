@@ -5,7 +5,7 @@ Tensor creation and distribution functions.
 """
 
 import torch
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 
 # Store patch status to avoid infinite recursion
 _patched = False
@@ -19,7 +19,7 @@ def apply_patches() -> None:
     if _patched:
         return
 
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     # Set flag before patching to avoid recursion
     _patched = True
 
@@ -54,7 +54,7 @@ def apply_patches() -> None:
                     orig_init(self, *args, **kwargs)
 
                 dist_class.__init__ = patched_init
-                log_info("Patched %s distribution" % dist_name)
+                log_info("Patched %s distribution", dist_name)
 
 
 def apply_patches_all() -> None:

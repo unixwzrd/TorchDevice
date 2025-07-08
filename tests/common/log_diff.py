@@ -9,6 +9,7 @@ import argparse
 import difflib
 import io
 import logging
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -19,18 +20,23 @@ UPDATE_EXPECTED_OUTPUT = False
 
 def check_args():
     """
-    Check command line arguments for the update-expected flag, set the global variable UPDATE_EXPECTED_OUTPUT.
+    Check command line arguments or environment variables for the update-expected flag.
     """
     global UPDATE_EXPECTED_OUTPUT
-    # Parse command line arguments
+    # Check environment variable first, as it's more reliable for subprocesses.
+    if os.environ.get('TORCHDEVICE_UPDATE_EXPECTED') == '1':
+        UPDATE_EXPECTED_OUTPUT = True
+        return
+
+    # Fallback to command-line arguments for standalone test runs.
     parser = argparse.ArgumentParser(description='Run TDLogger tests')
     parser.add_argument('--update-expected', action='store_true', help='Update expected output files', default=False)
 
-    # Parse known args to avoid conflicts with unittest's own argument parsing
+    # Parse known args to avoid conflicts with unittest's own argument parsing.
     args, remaining = parser.parse_known_args()
-    sys.argv = sys.argv[:1] + remaining  # Remove our custom args so unittest doesn't see them
+    sys.argv = sys.argv[:1] + remaining  # Remove our custom args so unittest doesn't see them.
 
-    # Global flag to update expected outputs - only using command line flag
+    # Global flag to update expected outputs.
     UPDATE_EXPECTED_OUTPUT = args.update_expected
 
 

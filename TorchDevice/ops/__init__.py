@@ -4,7 +4,7 @@ TorchDevice Operations Module
 Operation-specific patches and implementations.
 """
 
-from TorchDevice.core.logger import log_info
+from ..core.logger import log_info
 from . import (
     device,
     memory,

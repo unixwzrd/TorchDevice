@@ -6,7 +6,7 @@ Event synchronization and coordination.
 
 import torch
 from typing import Optional, Any
-from TorchDevice.core.logger import log_info, auto_log
+from ...core.logger import log_info, auto_log
 
 # Store original functions
 t_cuda_wait_event = getattr(torch.cuda, 'wait_event', None)
@@ -16,7 +16,7 @@ t_mps_wait_event = getattr(torch.mps, 'wait_event', None) if hasattr(torch, 'mps
 @auto_log()
 def wait_event(event: Any, device: Optional[torch.device] = None) -> None:
     """Wait for an event to complete."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_wait_event:
         t_cuda_wait_event(event)

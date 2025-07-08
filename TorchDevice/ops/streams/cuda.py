@@ -88,7 +88,7 @@ class t_cuda_Event(_EventBase): # type: ignore
         if self._td_enable_timing:
             self._td_recorded_time = time.perf_counter()
         self._td_is_recorded = True
-        log_info(f"Event recorded on device {self._td_device}, timing enabled: {self._td_enable_timing}")
+        log_info("Event recorded on device %s, timing enabled: %s", self._td_device, self._td_enable_timing)
 
     @auto_log()
     def synchronize(self) -> None:
@@ -143,7 +143,7 @@ class t_cuda_Event(_EventBase): # type: ignore
             # after this event is complete.
             # Or, more directly, if stream operations are enqueued, they'd see the effect of this sync.
             # This is a bit hand-wavy for a mock; true implementation is complex.
-            log_info(f"Event.wait() called for stream {stream}. Event is synchronized. Stream operations will proceed after.")
+            log_info("Event.wait() called for stream %s. Event is synchronized. Stream operations will proceed after.", stream)
 
 
 class t_cuda_Stream(_StreamBase): # type: ignore

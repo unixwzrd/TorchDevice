@@ -4,7 +4,7 @@ TorchDevice Compilation Utilities Module
 Compilation and optimization utilities.
 """
 
-from TorchDevice.core.logger import log_info
+from ..core.logger import log_info
 
 log_info("Initializing TorchDevice compile utils module")
 

@@ -5,6 +5,9 @@ Core tensor movement and device redirection functionality.
 """
 
 import torch
+import threading
+from typing import Any, Callable, TypeVar
+from functools import wraps
 from .logger import log_info, auto_log
 from .device import DeviceManager, _ORIGINAL_TORCH_DEVICE_CLASS
 
@@ -67,7 +70,7 @@ def tensor_mps_replacement(tensor, non_blocking=False, memory_format=torch.prese
     return t_Tensor_to(tensor, device, non_blocking=non_blocking, memory_format=memory_format)
 
 
-@log_operation()
+@auto_log()
 def numpy_replacement(tensor):
     """
     Replacement for torch.Tensor.numpy() that moves tensor to CPU first if needed.
@@ -89,27 +92,31 @@ def numpy_replacement(tensor):
     return t_Tensor_numpy(tensor)
 
 
+T = TypeVar('T')
+
+
 @auto_log()
-def tensor_creation_wrapper(original_func):
+def tensor_creation_wrapper(original_func: Callable[..., T]) -> Callable[..., T]:
     """
-    Wrapper for tensor creation functions to enforce default device redirection and CPU override.
-    Always calls DeviceManager.torch_device_replacement for the device argument.
+    Wrapper for tensor creation functions to enforce default device redirection.
+    The @auto_log decorator handles re-entry to prevent duplicate logs.
     """
-    def wrapped_func(*args, **kwargs):
+    @auto_log()
+    @wraps(original_func)
+    def wrapped_func(*args: Any, **kwargs: Any) -> T:
         device_arg = kwargs.get('device', None)
 
         if device_arg is None:
-            # No device specified, use the current default (which respects CPU override)
-            # Pass no args to torch_device_replacement to get current default.
+            # No device specified, use the current default.
             resolved_device = DeviceManager.torch_device_replacement()
             kwargs['device'] = resolved_device
         else:
-            # Device specified, resolve it through DeviceManager to respect override and map 'cuda'/'mps'
+            # Device specified, resolve it through DeviceManager.
             resolved_device = DeviceManager.torch_device_replacement(device_arg)
             kwargs['device'] = resolved_device
         
-        #log_info(f"tensor_creation_wrapper: original_func={original_func.__name__}, resolved_device='{kwargs['device']}' for input_device='{device_arg}'")
         return original_func(*args, **kwargs)
+
     return wrapped_func
 
 

@@ -4,7 +4,7 @@ TorchDevice Utilities Module
 Utility functions and helpers.
 """
 
-from TorchDevice.core.logger import log_info, auto_log
+from ..core.logger import log_info, auto_log
 from . import (
     compile as compile_module,
     device_utils as device_utils_module,

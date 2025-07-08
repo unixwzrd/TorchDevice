@@ -8,7 +8,7 @@ import torch
 import types
 import sys
 from typing import Optional, Any, Callable, List, Dict, Union
-from TorchDevice.core.logger import log_info, log_warning, log_error, auto_log
+from ...core.logger import log_info, log_warning, log_error, auto_log
 
 try:
     import psutil
@@ -19,7 +19,7 @@ except ImportError:
 # --- Canonical Module References --- 
 # These must be defined early, as PyTorch might import and cache them internally.
 import inspect # For type checking if needed, though explicit overwrite is planned
-from TorchDevice.core import hardware_info # For context-aware stubs
+from ...core import hardware_info # For context-aware stubs
 
 _cuda_module_ref = sys.modules.get('torch.cuda')
 _backends_cuda_module_ref = sys.modules.get('torch.backends.cuda')
@@ -31,7 +31,7 @@ if not _cuda_module_ref:
     setattr(_cuda_module_ref, '__module_origin__', 'TorchDevice_mock') # Mark our mock
     torch.cuda = _cuda_module_ref # Assign the mock module to torch.cuda
     sys.modules['torch.cuda'] = _cuda_module_ref # Ensure global import visibility
-    log_info(f"TorchDevice (ops.device.cuda module load): Created mock torch.cuda and updated torch.cuda (ID: {id(torch.cuda)}) and sys.modules['torch.cuda'] (ID: {id(sys.modules['torch.cuda'])}).")
+    log_info("TorchDevice (ops.device.cuda module load): Created mock torch.cuda and updated torch.cuda (ID: %s) and sys.modules['torch.cuda'] (ID: %s).", id(torch.cuda), id(sys.modules['torch.cuda']))
 
     # Also create mock torch.backends.cuda if it's missing or if torch.cuda was missing
     # Check if torch.backends exists first
@@ -47,7 +47,7 @@ if not _cuda_module_ref:
             sys.modules['torch.backends'] = torch.backends
         torch.backends.cuda = _backends_cuda_module_ref
         sys.modules['torch.backends.cuda'] = _backends_cuda_module_ref
-        log_info(f"TorchDevice (ops.device.cuda module load): Created mock torch.backends.cuda and updated torch.backends.cuda (ID: {id(torch.backends.cuda)}) and sys.modules['torch.backends.cuda'] (ID: {id(sys.modules['torch.backends.cuda'])}).")
+        log_info("TorchDevice (ops.device.cuda module load): Created mock torch.backends.cuda and updated torch.backends.cuda (ID: %s) and sys.modules['torch.backends.cuda'] (ID: %s).", id(torch.backends.cuda), id(sys.modules['torch.backends.cuda']))
     elif hasattr(torch, 'backends') and hasattr(torch.backends, 'cuda'):
         _backends_cuda_module_ref = torch.backends.cuda_module_ref
     log_info("TorchDevice (module load ops.device.cuda): Mock torch.backends.cuda module created and assigned.")
@@ -105,13 +105,13 @@ def _is_torch_actually_compiled_with_cuda() -> bool:
     """Return True if PyTorch was compiled with CUDA support, False otherwise."""
     return __is_torch_actually_compiled_with_cuda_value
 
-log_info(f"TorchDevice (module load ops.device.cuda): Is PyTorch actually compiled with CUDA (via torch._C._cuda_getDeviceCount): {__is_torch_actually_compiled_with_cuda_value}")
+log_info("TorchDevice (module load ops.device.cuda): Is PyTorch actually compiled with CUDA (via torch._C._cuda_getDeviceCount): %s", __is_torch_actually_compiled_with_cuda_value)
 
 if _cuda_module_ref:
     _original_lazy_init = getattr(_cuda_module_ref, '_lazy_init', None)
-    log_info(f"TorchDevice (module load): Stored original _lazy_init from _cuda_module_ref: {_original_lazy_init is not None}")
+    log_info("TorchDevice (module load): Stored original _lazy_init from _cuda_module_ref: %s", _original_lazy_init is not None)
     _original_is_initialized = getattr(_cuda_module_ref, 'is_initialized', None)
-    log_info(f"TorchDevice (module load): Stored original is_initialized from _cuda_module_ref: {_original_is_initialized is not None}")
+    log_info("TorchDevice (module load): Stored original is_initialized from _cuda_module_ref: %s", _original_is_initialized is not None)
 else:
     # This case was handled by the log_warning above, but set to None for safety
     _original_lazy_init = None
@@ -178,37 +178,37 @@ def cuda_empty_cache_replacement():
 @auto_log()
 def cuda_memory_allocated_replacement(device=None):
     """Simulated torch.cuda.memory_allocated()."""
-    log_info(f"Simulated torch.cuda.memory_allocated(device={device}) called. Returning 0.")
+    log_info("Simulated torch.cuda.memory_allocated(device=%s) called. Returning 0.", device)
     return 0
 
 @auto_log()
 def cuda_max_memory_allocated_replacement(device=None):
     """Simulated torch.cuda.max_memory_allocated()."""
-    log_info(f"Simulated torch.cuda.max_memory_allocated(device={device}) called. Returning 0.")
+    log_info("Simulated torch.cuda.max_memory_allocated(device=%s) called. Returning 0.", device)
     return 0
 
 @auto_log()
 def cuda_reset_peak_memory_stats_replacement(device=None):
     """Simulated torch.cuda.reset_peak_memory_stats()."""
-    log_info(f"Simulated torch.cuda.reset_peak_memory_stats(device={device}) called.")
+    log_info("Simulated torch.cuda.reset_peak_memory_stats(device=%s) called.", device)
     # No-op for simulation
 
 @auto_log()
 def cuda_memory_reserved_replacement(device=None):
     """Simulated torch.cuda.memory_reserved()."""
-    log_info(f"Simulated torch.cuda.memory_reserved(device={device}) called. Returning 0.")
+    log_info("Simulated torch.cuda.memory_reserved(device=%s) called. Returning 0.", device)
     return 0
 
 @auto_log()
 def cuda_max_memory_reserved_replacement(device=None):
     """Simulated torch.cuda.max_memory_reserved()."""
-    log_info(f"Simulated torch.cuda.max_memory_reserved(device={device}) called. Returning 0.")
+    log_info("Simulated torch.cuda.max_memory_reserved(device=%s) called. Returning 0.", device)
     return 0
 
 @auto_log()
 def cuda_memory_stats_replacement(device=None):
     """Simulated torch.cuda.memory_stats(). Returns a dict with common keys and zero values."""
-    log_info(f"Simulated torch.cuda.memory_stats(device={device}) called. Returning placeholder stats.")
+    log_info("Simulated torch.cuda.memory_stats(device=%s) called. Returning placeholder stats.", device)
     # Return a dictionary with common keys expected by tests, with 0 values
     # Based on torch.cuda.memory_stats() output structure
     return {
@@ -232,9 +232,9 @@ _backends_cuda_module_ref = sys.modules.get('torch.backends.cuda')
 
 if _cuda_module_ref:
     _original_lazy_init = getattr(_cuda_module_ref, '_lazy_init', None)
-    log_info(f"TorchDevice (module load): Stored original _lazy_init from _cuda_module_ref: {_original_lazy_init is not None}")
+    log_info("TorchDevice (module load): Stored original _lazy_init from _cuda_module_ref: %s", _original_lazy_init is not None)
     _original_is_initialized = getattr(_cuda_module_ref, 'is_initialized', None)
-    log_info(f"TorchDevice (module load): Stored original is_initialized from _cuda_module_ref: {_original_is_initialized is not None}")
+    log_info("TorchDevice (module load): Stored original is_initialized from _cuda_module_ref: %s", _original_is_initialized is not None)
 else:
     _original_lazy_init = None
     _original_is_initialized = None
@@ -249,7 +249,7 @@ def _universal_lazy_init_replacement():
     """
     # Directly use the global value and log it for clarity
     is_compiled = __is_torch_actually_compiled_with_cuda_value
-    log_info(f"TorchDevice (_universal_lazy_init_replacement): Entered. PyTorch compiled with CUDA (observed value): {is_compiled}")
+    log_info("TorchDevice (_universal_lazy_init_replacement): Entered. PyTorch compiled with CUDA (observed value): %s", is_compiled)
     
     if not is_compiled:
         if _cuda_module_ref:
@@ -276,11 +276,11 @@ def _universal_is_initialized_replacement():
     Otherwise, calls the original is_initialized.
     """
     is_compiled = __is_torch_actually_compiled_with_cuda_value # Use the global boolean
-    log_info(f"TorchDevice (_universal_is_initialized_replacement): Entered. PyTorch compiled with CUDA (observed value): {is_compiled}")
+    log_info("TorchDevice (_universal_is_initialized_replacement): Entered. PyTorch compiled with CUDA (observed value): %s", is_compiled)
 
     if not is_compiled:
         initialized_status = getattr(_cuda_module_ref, '_initialized', False)
-        log_info(f"TorchDevice (_universal_is_initialized): CUDA not compiled, returning _cuda_module_ref._initialized: {initialized_status}")
+        log_info("TorchDevice (_universal_is_initialized): CUDA not compiled, returning _cuda_module_ref._initialized: %s", initialized_status)
         return initialized_status
     
     # If execution reaches here, it means is_compiled is True
@@ -316,7 +316,7 @@ def apply_patches():
         log_info("TorchDevice (apply_patches ops.device.cuda): Skipping CUDA patches, running on actual CUDA hardware.")
         return
 
-    log_info(f"TorchDevice (apply_patches ops.device.cuda): Applying CUDA patches on non-CUDA hardware ({current_device.type if current_device else 'unknown'}).")
+    log_info("TorchDevice (apply_patches ops.device.cuda): Applying CUDA patches on non-CUDA hardware (%s).", current_device.type if current_device else 'unknown')
 
     if not _cuda_module_ref:
         log_error("TorchDevice (apply_patches ops.device.cuda): _cuda_module_ref is None. Cannot apply CUDA patches.")
@@ -346,7 +346,7 @@ def apply_patches():
 
     # Call _lazy_init here to ensure _initialized is set correctly by our replacement if needed
     _cuda_module_ref._lazy_init()
-    log_info(f"TorchDevice (apply_patches ops.device.cuda): Called patched _lazy_init. _cuda_module_ref._initialized is now: {getattr(_cuda_module_ref, '_initialized', 'Not Set')}")
+    log_info("TorchDevice (apply_patches ops.device.cuda): Called patched _lazy_init. _cuda_module_ref._initialized is now: %s", getattr(_cuda_module_ref, '_initialized', 'Not Set'))
 
     if not _is_torch_actually_compiled_with_cuda():
         log_info("TorchDevice (apply_patches ops.device.cuda): PyTorch NOT compiled with CUDA. Applying comprehensive stubs.")
@@ -429,9 +429,9 @@ def apply_patches():
         for name, stub_impl in stubs_for_non_cuda_build.items():
             setattr(_cuda_module_ref, name, stub_impl)
             if name == 'current_device':
-                log_info(f"TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.current_device with ID: {id(stub_impl)} (local func ID: {id(_stub_current_device_non_cuda)})")
+                log_info("TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.current_device with ID: %s (local func ID: %s)", id(stub_impl), id(_stub_current_device_non_cuda))
             elif name == 'device_count':
-                log_info(f"TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.device_count with ID: {id(stub_impl)} (local func ID: {id(_stub_device_count_non_cuda)})")
+                log_info("TorchDevice (apply_patches ops.device.cuda): Stubbed torch.cuda.device_count with ID: %s (local func ID: %s)", id(stub_impl), id(_stub_device_count_non_cuda))
 
         # AMP Stubs
         if not hasattr(_cuda_module_ref, 'amp') or not isinstance(getattr(_cuda_module_ref, 'amp'), types.ModuleType):
@@ -528,7 +528,7 @@ def _cuda_amp_autocast_replacement(enabled=True, dtype=None, cache_enabled=None,
     This creates a context manager for autocasting in PyTorch's automatic mixed precision.
     When running on MPS, this redirects to torch.amp.autocast(device_type='mps').
     """
-    from TorchDevice.core.device import DeviceManager # Local import to break circular dependency
+    from ...core.device import DeviceManager # Local import to break circular dependency
     log_info("TorchDevice (_cuda_amp_autocast_replacement): Redirecting cuda.amp.autocast to amp.autocast")
     device = DeviceManager.get_default_device()
     device_type = 'cuda' if device and device.type == 'cuda' else 'mps' if device and device.type == 'mps' else 'cpu'
@@ -561,7 +561,7 @@ class _GradScalerReplacement:
     with appropriate arguments.  
     """
     def __init__(self, **kwargs):
-        from TorchDevice.core.device import DeviceManager # Local import to break circular dependency
+        from ...core.device import DeviceManager # Local import to break circular dependency
         log_info("TorchDevice (_GradScalerReplacement.__init__): Creating compatible GradScaler")
         device = DeviceManager.get_default_device()
         device_type = device.type if device else 'cpu'

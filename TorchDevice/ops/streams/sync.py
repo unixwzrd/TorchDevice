@@ -6,8 +6,8 @@ Stream synchronization and event management.
 
 import torch
 from typing import Optional, Any
-from TorchDevice.core.logger import log_info, auto_log
-from TorchDevice.core.device import DeviceManager
+from ...core.logger import log_info, auto_log
+from ...core.device import DeviceManager
 
 # Store original functions
 t_cuda_synchronize = torch.cuda.synchronize if hasattr(torch.cuda, 'synchronize') else None
@@ -28,7 +28,7 @@ def t_cuda_synchronize_function(device: Optional[Any] = None) -> None:
 @auto_log()
 def synchronize(device: Optional[torch.device] = None) -> None:
     """Synchronize the current device."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = device or DeviceManager.get_default_device()
     if device.type == 'cuda' and t_cuda_synchronize:
         t_cuda_synchronize(device)

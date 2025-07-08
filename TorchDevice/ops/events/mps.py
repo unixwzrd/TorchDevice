@@ -6,7 +6,7 @@ MPS event management and operations.
 
 import torch
 from typing import Optional, Any
-from TorchDevice.core.logger import log_info, auto_log
+from ...core.logger import log_info, auto_log
 
 # Store original functions if they exist (MPS might not have event support yet)
 t_mps_Event = getattr(torch.mps, 'Event', None) if hasattr(torch, 'mps') else None
@@ -16,7 +16,7 @@ t_mps_current_event = getattr(torch.mps, 'current_event', None) if hasattr(torch
 @auto_log()
 def Event(enable_timing: bool = False, blocking: bool = False, interprocess: bool = False) -> Optional[Any]:
     """Create a new MPS event."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = DeviceManager.get_default_device()
     if device.type == 'mps' and t_mps_Event:
         return t_mps_Event(enable_timing=enable_timing)
@@ -26,7 +26,7 @@ def Event(enable_timing: bool = False, blocking: bool = False, interprocess: boo
 @auto_log()
 def current_event() -> Optional[Any]:
     """Get the current MPS event."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = DeviceManager.get_default_device()
     if device.type == 'mps' and t_mps_current_event is not None:
         return t_mps_current_event()

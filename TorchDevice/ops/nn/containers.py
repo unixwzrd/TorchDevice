@@ -5,20 +5,20 @@ Neural network container classes (Sequential, ModuleList, etc.).
 """
 
 import torch
-from TorchDevice.core.logger import log_info, auto_log
+from ...core.logger import log_info, auto_log
 
 
 @auto_log()
 def to_device(module: torch.nn.Module, device: torch.device = None) -> torch.nn.Module:
     """Move module and its parameters to the specified device."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     device = DeviceManager.torch_device_replacement(device)
     return module.to(device)
 
 
 def apply_patches() -> None:
     """Apply neural network container patches."""
-    from TorchDevice.core.device import DeviceManager  # Local import
+    from ...core.device import DeviceManager  # Local import
     log_info("Applying nn container patches")
 
     # Store original to() method

@@ -7,6 +7,7 @@ Core patching functionality and orchestration.
 import functools
 import inspect
 import logging
+import threading
 from typing import Callable, TypeVar, Any
 import torch
 
@@ -15,6 +16,9 @@ from . import device # Import device directly
 from . import tensors as core_tensors
 from . import modules as core_modules
 from .device import DeviceManager
+
+# Thread-local guard to prevent re-entry into the tensor creation wrapper
+_in_tensor_creation_wrapper = threading.local()
 
 # Define tensor_creation_wrapper before importing ops modules to avoid circular imports
 T = TypeVar('T')
@@ -26,43 +30,41 @@ def tensor_creation_wrapper(func: Callable[..., T]) -> Callable[..., T]:
     """
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
-        # Get the original device argument (if any) for logging and processing
-        device_arg_original = kwargs.get('device', None)
-        
-        final_device_obj: torch.device
-        if device_arg_original is None:
-            # No device specified by user, get the current effective device from DeviceManager
-            final_device_obj = DeviceManager.torch_device_replacement()
-        else:
-            # User specified a device, let DeviceManager process it (handles 'cpu:-1', redirection, etc.)
-            final_device_obj = DeviceManager.torch_device_replacement(device_arg_original)
-        
-        # Update kwargs with the definitively determined device object
-        # This final_device_obj is the one that will be passed to the original PyTorch function
-        kwargs['device'] = final_device_obj
-        
-        # Prepare extra info for logging
-        frame = inspect.currentframe().f_back
-        caller_info_extra = {
-            'program_name': 'TorchDevice',
-            'caller_func_name': frame.f_code.co_name if frame else 'unknown_func',
-            'caller_filename': frame.f_code.co_filename if frame else 'unknown_file',
-            'caller_lineno': frame.f_lineno if frame else 0,
-            'torch_function': func.__name__
-        }
+        # Initialize thread-local if not present
+        if not hasattr(_in_tensor_creation_wrapper, 'value'):
+            _in_tensor_creation_wrapper.value = False
 
-        # Log if a redirection or significant change occurred.
-        if device_arg_original is not None and str(device_arg_original) != str(final_device_obj):
-            log_message = "GPU REDIRECT - Requested: %s -> Used: %s" % (str(device_arg_original), str(final_device_obj))
-            logger = logging.getLogger("TorchDevice")
-            logger.info(log_message, extra=caller_info_extra)
-        # No explicit logging if device_arg_original was None, to match original behavior pattern.
+        # If we are already in a tensor creation wrapper, pass through to avoid nested logging.
+        if _in_tensor_creation_wrapper.value:
+            return func(*args, **kwargs)
+        
+        _in_tensor_creation_wrapper.value = True
+        try:
+            # Get the original device argument (if any) for logging and processing
+            device_arg_original = kwargs.get('device', None)
+            
+            final_device_obj: torch.device
+            if device_arg_original is None:
+                # No device specified by user, get the current effective device from DeviceManager
+                final_device_obj = DeviceManager.torch_device_replacement()
+            else:
+                # User specified a device, let DeviceManager process it (handles 'cpu:-1', redirection, etc.)
+                final_device_obj = DeviceManager.torch_device_replacement(device_arg_original)
+            
+            # Update kwargs with the definitively determined device object
+            # This final_device_obj is the one that will be passed to the original PyTorch function
+            kwargs['device'] = final_device_obj
+            
+            # The logging is now handled by the @auto_log decorator on torch_device_replacement.
+            # The custom logging logic previously here was redundant and has been removed.
 
-        return func(*args, **kwargs)
+            return func(*args, **kwargs)
+        finally:
+            _in_tensor_creation_wrapper.value = False
     return wrapped_func
 
 # Import operation modules after defining the wrapper
-from TorchDevice.ops import (
+from ..ops import (
     memory,
     nn,
     random,
@@ -72,7 +74,7 @@ from TorchDevice.ops import (
 )
 
 # Import utility modules
-from TorchDevice.utils import (
+from ..utils import (
     compile,
     device_utils,
     error_handling,
@@ -141,11 +143,11 @@ def _apply_core_patches() -> None:
                 
                 wrapped_func = tensor_creation_wrapper(original_func)
                 setattr(torch, func_name, wrapped_func)
-                # log_info(f"Patched torch.{func_name}") # Can be verbose, enable if needed
+                # log_info("Patched torch.%s", func_name) # Can be verbose, enable if needed
             else:
-                log_info(f"Skipping torch.{func_name} as it's not callable.")
+                log_info("Skipping torch.%s as it's not callable.", func_name)
         else:
-            log_info(f"Skipping torch.{func_name} as it does not exist.")
+            log_info("Skipping torch.%s as it does not exist.", func_name)
     log_info("  Tensor creation function wrappers applied.")
 
     _core_patched = True
@@ -160,7 +162,7 @@ def _apply_ops_patches() -> None:
         return
 
     # Import ops package here to ensure it's fully initialized before calling its apply_patches
-    from TorchDevice import ops 
+    from .. import ops 
     log_info("Applying all operation package patches via ops.apply_patches()")
     ops.apply_patches() # Call the apply_patches from TorchDevice/ops/__init__.py
     _ops_patched = True
@@ -204,8 +206,9 @@ def apply_patches() -> None:
     log_info("TorchDevice patch application complete")
 
 
+
 def ensure_patched() -> None:
-    """Ensure all patches are applied."""
+    """Ensure that all patches are applied, but only once."""
     apply_patches()
 
 

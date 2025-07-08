@@ -5,7 +5,7 @@ MPS-specific operations and patches.
 """
 
 import torch
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 # Tensor movement functions are now in core.tensors
 
 # Tensor and module MPS replacement functions are now in core.tensors module
@@ -40,5 +40,5 @@ def _is_mps_actually_available() -> bool:
     # and how DeviceManager._detect_default_device_type handles it.
     available = torch.backends.mps.is_available()
     built = torch.backends.mps.is_built()
-    log_info(f"MPS available: {available}, MPS built: {built}")
+    log_info("MPS available: %s, MPS built: %s", available, built)
     return available and built

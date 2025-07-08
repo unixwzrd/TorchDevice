@@ -28,16 +28,19 @@ class TestCPUOperations(PrefixedTestCase):
     
     def setUp(self):
         """Set up test environment with CPU override."""
-        
-        # Explicitly override to CPU using the special device notation
-        self.device = torch.device('cpu')
-        self.info(f"Using device: {self.device}")
+        super().setUp()
+        self.info("Toggling CPU override ON for all tests in this class.")
+        torch.device('cpu:-1')  # Toggle ON
+        self.device = torch.device('cpu')  # This will now be a guaranteed CPU device
+        self.info(f"Using device: {self.device.type}")
         
         # Set up log capture
         self.log_capture = setup_log_capture(self._testMethodName, Path(__file__).parent)
     
     def tearDown(self):
         """Clean up logger capture and restore original configuration."""
+        self.info("Toggling CPU override OFF after all tests in this class.")
+        torch.device('cpu:-1')  # Toggle OFF
         teardown_log_capture(self.log_capture)
         super().tearDown()
     
@@ -50,9 +53,8 @@ class TestCPUOperations(PrefixedTestCase):
         cpu_tensor2 = torch.zeros(3, 4, device='cpu')
         
         # Verify tensors are on CPU
-        expected_device = torch.device('cpu')
-        self.assertTrue(devices_equivalent(cpu_tensor1.device, expected_device))
-        self.assertTrue(devices_equivalent(cpu_tensor2.device, expected_device))
+        self.assertEqual(cpu_tensor1.device.type, 'cpu')
+        self.assertEqual(cpu_tensor2.device.type, 'cpu')
         
         self.info("CPU tensor creation tests passed")
         
@@ -72,9 +74,8 @@ class TestCPUOperations(PrefixedTestCase):
         d = torch.nn.functional.relu(c)
         
         # Verify tensors are on CPU
-        expected_device = torch.device('cpu')
-        self.assertTrue(devices_equivalent(c.device, expected_device))
-        self.assertTrue(devices_equivalent(d.device, expected_device))
+        self.assertEqual(c.device.type, 'cpu')
+        self.assertEqual(d.device.type, 'cpu')
         
         self.info("CPU tensor operations tests passed")
         
@@ -95,20 +96,18 @@ class TestCPUOperations(PrefixedTestCase):
             torch.nn.Linear(5, 1)
         )
         
-        # Move model to the hardware default device using .to()
-        expected_device = torch.device('cpu')
-        model = model.to(expected_device)
+        # Move model to the CPU
+        model = model.to('cpu')
         
-        # Double check all parameters are on the expected device
+        # Double check all parameters are on the CPU
         for param in model.parameters():
-            self.assertTrue(devices_equivalent(param.device, expected_device))
+            self.assertEqual(param.device.type, 'cpu')
         
         # Now perform the forward pass
         output = model(x)
         
         # Verify output is on CPU
-        expected_device = torch.device('cpu')
-        self.assertTrue(devices_equivalent(output.device, expected_device))
+        self.assertEqual(output.device.type, 'cpu')
         
         self.info("CPU neural network operations tests passed")
         

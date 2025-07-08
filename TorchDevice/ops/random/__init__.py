@@ -4,7 +4,7 @@ TorchDevice Random Operations Module
 Random number generation and seed management.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 from . import generators, distributions
 
 log_info("Initializing TorchDevice random operations module")

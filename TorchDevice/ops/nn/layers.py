@@ -8,8 +8,8 @@ to ensure they respect the device selection policy managed by DeviceManager.
 import torch
 from typing import Any, Callable
 
-from TorchDevice.core.logger import log_info, auto_log
-from TorchDevice.core.device import DeviceManager
+from ...core.logger import log_info, auto_log
+from ...core.device import DeviceManager
 
 _original_module_to: Callable[..., Any] | None = None
 _original_module_cuda: Callable[..., Any] | None = None
@@ -22,7 +22,7 @@ def _patched_module_to(module_instance: torch.nn.Module, *args: Any, **kwargs: A
     global _original_module_to
     if not _original_module_to:
         # This should not happen if apply_patches was called correctly
-        log_info("Original torch.nn.Module.to not found, calling unpatched version.", level="ERROR")
+        log_error("Original torch.nn.Module.to not found, calling unpatched version.")
         return module_instance # Or raise an error
 
     processed_args = list(args)
@@ -54,7 +54,7 @@ def _patched_module_cuda(module_instance: torch.nn.Module, device_arg: Any = Non
     """Patched version of torch.nn.Module.cuda()"""
     global _original_module_to
     if not _original_module_to:
-        log_info("Original torch.nn.Module.to not found for cuda patch.", level="ERROR")
+        log_error("Original torch.nn.Module.to not found for cuda patch.")
         return module_instance
 
     if device_arg is None:
@@ -75,7 +75,7 @@ def _patched_module_mps(module_instance: torch.nn.Module) -> torch.nn.Module:
     """Patched version of torch.nn.Module.mps()"""
     global _original_module_to
     if not _original_module_to:
-        log_info("Original torch.nn.Module.to not found for mps patch.", level="ERROR")
+        log_error("Original torch.nn.Module.to not found for mps patch.")
         return module_instance
     
     resolved_device = DeviceManager.torch_device_replacement('mps')
@@ -86,7 +86,7 @@ def _patched_module_cpu(module_instance: torch.nn.Module) -> torch.nn.Module:
     """Patched version of torch.nn.Module.cpu()"""
     global _original_module_to
     if not _original_module_to:
-        log_info("Original torch.nn.Module.to not found for cpu patch.", level="ERROR")
+        log_error("Original torch.nn.Module.to not found for cpu patch.")
         return module_instance
 
     resolved_device = DeviceManager.torch_device_replacement('cpu')
@@ -107,21 +107,21 @@ def apply_patches() -> None:
             setattr(torch.nn.Module, 'cuda', _patched_module_cuda)
         else:
             log_info("torch.nn.Module.cuda not found, creating patch.")
-            setattr(torch.nn.Module, 'cuda', _patched_module_cuda) # Create if not exists
+            setattr(torch.nn.Module, 'cuda', _patched_module_cuda)  # Create if not exists
 
         if hasattr(torch.nn.Module, 'mps'):
             _original_module_mps = torch.nn.Module.mps
             setattr(torch.nn.Module, 'mps', _patched_module_mps)
         else:
             log_info("torch.nn.Module.mps not found, creating patch.")
-            setattr(torch.nn.Module, 'mps', _patched_module_mps) # Create if not exists
+            setattr(torch.nn.Module, 'mps', _patched_module_mps)  # Create if not exists
 
         if hasattr(torch.nn.Module, 'cpu'):
             _original_module_cpu = torch.nn.Module.cpu
             setattr(torch.nn.Module, 'cpu', _patched_module_cpu)
         else:
             # .cpu() should always exist on nn.Module
-            log_info("torch.nn.Module.cpu not found (unexpected), creating patch.", level="WARNING")
+            log_info("torch.nn.Module.cpu not found (unexpected), creating patch.")
             setattr(torch.nn.Module, 'cpu', _patched_module_cpu)
 
         setattr(torch.nn.Module, '_is_torchdevice_patched_nn_layers', True)

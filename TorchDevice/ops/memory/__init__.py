@@ -4,7 +4,7 @@ TorchDevice Memory Operations Module
 Memory management and tracking.
 """
 
-from TorchDevice.core.logger import log_info
+from ...core.logger import log_info
 from . import management, stats
 
 log_info("Initializing TorchDevice memory module")
