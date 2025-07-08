@@ -67,7 +67,7 @@ def tensor_mps_replacement(tensor, non_blocking=False, memory_format=torch.prese
     return t_Tensor_to(tensor, device, non_blocking=non_blocking, memory_format=memory_format)
 
 
-@auto_log()
+@log_operation()
 def numpy_replacement(tensor):
     """
     Replacement for torch.Tensor.numpy() that moves tensor to CPU first if needed.
