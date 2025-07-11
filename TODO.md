@@ -130,8 +130,45 @@
   - [x] Add examples for all major features
   - [x] Include type annotations for better IDE support
 
+## Performance Architecture Improvements
+
+- [ ] **Smart Patching Implementation**
+  - [ ] Implement selective patch application (only patch when needed)
+  - [ ] Add early-exit mechanisms for tensors already on correct device
+  - [ ] Create device capability matrix for operation routing
+  - [ ] Implement direct passthrough for device-agnostic operations
+
+- [ ] **Robust Device Fallback System** ⭐ **HIGH PRIORITY**
+  - [ ] **Implement intelligent device fallback** - try target device first, fall back to CPU only on specific errors
+  - [ ] **Add operation capability detection** - cache which operations work on which devices
+  - [ ] **Create automatic fallback routing** - CUDA → MPS → MLX → CPU with proper return type handling
+  - [ ] **Performance optimization** - avoid unnecessary CPU moves, only fall back when actually needed
+  - [ ] **Return type consistency** - ensure all fallback paths return the same type (e.g., PackedSequence not tuple)
+  - [ ] **Error pattern recognition** - detect specific device compatibility errors vs. general errors
+  - [ ] **Fallback caching** - remember which operations failed on which devices to avoid repeated attempts
+  - [ ] **Graceful degradation** - provide clear error messages when fallback is not possible
+
+- [ ] **MLX Integration**
+  - [ ] Add MLX availability detection
+  - [ ] Create MLX equivalents for CUDA operations
+  - [ ] Implement CUDA→MLX fallback system
+  - [ ] Add MLX performance optimization
+
+- [ ] **Performance Benchmarking**
+  - [ ] Create comprehensive performance test suite
+  - [ ] Implement automated performance regression testing
+  - [ ] Add performance profiling tools
+  - [ ] Target 15-25% improvement in real-world workloads
+
+- [ ] **Device Hierarchy Optimization**
+  - [ ] Implement CUDA → MPS → MLX → CPU fallback strategy
+  - [ ] Optimize device detection and routing
+  - [ ] Add performance comparison modes
+  - [ ] Reduce patching overhead by 90%
+
 ## Known Issues
 
 - TorchDevice.py has several linter errors that should be addressed in a future refactoring (mostly resolved by modularization)
 - CPU override may not work with all third-party extensions to PyTorch
-- The override remains active for the entire Python session; a future enhancement could allow toggling it on/off 
+- The override remains active for the entire Python session; a future enhancement could allow toggling it on/off
+- **Performance Issue**: Only 1% difference between MPS and CPU in text-to-speech modules, indicating significant optimization opportunity 

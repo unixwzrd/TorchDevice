@@ -13,9 +13,41 @@ from . import hardware_info # Use our new hardware_info module
 _ORIGINAL_TORCH_DEVICE_CLASS = torch.device("cpu").__class__
 
 
+class FakeDevice:
+    """A fake device that masquerades as one type but actually uses another."""
+    def __init__(self, fake_type, real_device):
+        self._fake_type = fake_type
+        self._real_device = real_device
+        self._index = real_device.index
+    
+    @property
+    def type(self):
+        return self._fake_type
+    
+    @property
+    def index(self):
+        return self._index
+    
+    def __str__(self):
+        return f"device(type='{self._fake_type}', index={self._index})"
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def __eq__(self, other):
+        if isinstance(other, FakeDevice):
+            return self._fake_type == other._fake_type and self._index == other._index
+        elif hasattr(other, 'type') and hasattr(other, 'index'):
+            return self._fake_type == other.type and self._index == other.index
+        return False
+    
+    def __hash__(self):
+        return hash((self._fake_type, self._index))
+
+
 class PatchedTorchDeviceMeta(type):
     def __instancecheck__(self, instance):
-        return isinstance(instance, _ORIGINAL_TORCH_DEVICE_CLASS)
+        return isinstance(instance, _ORIGINAL_TORCH_DEVICE_CLASS) or isinstance(instance, FakeDevice)
 
     # Optional: if issubclass checks are also needed against the original type
     # def __subclasscheck__(cls, subclass):
@@ -124,9 +156,27 @@ class DeviceManager:
                         cls._cpu_override = True
                         cls._previous_default_device_type = cls._default_device_type
                         cls._default_device_type = 'cpu'
-        device_type = cls._default_device_type
-        result = cls.t_device(device_type, device_index)
-        return result
+                elif cls.cpu_override():
+                    # CPU override is active, return actual CPU
+                    result = cls.t_device("cpu", device_index)
+                    return result
+                else:
+                    # Application explicitly asked for CPU, but we're on MPS
+                    # Return a fake CPU device that actually points to MPS
+                    log_info("Application requested CPU device, returning fake CPU device pointing to MPS")
+                    real_device = cls.t_device("mps", device_index or 0)
+                    return FakeDevice("cpu", real_device)
+            elif device_type == "cuda":
+                # Application explicitly asked for CUDA, but we're on MPS
+                # Return a fake CUDA device that actually points to MPS
+                log_info("Application requested CUDA device, returning fake CUDA device pointing to MPS")
+                real_device = cls.t_device("mps", device_index or 0)
+                return FakeDevice("cuda", real_device)
+            else:
+                # Use default device type
+                device_type = cls._default_device_type
+                result = cls.t_device(device_type, device_index)
+                return result
 
 
 class _TorchDevicePatcher:

@@ -25,7 +25,7 @@ _init_bypass_state()  # Initialize on module load
 # --- Public Functions and Context Managers --- #
 def is_bypass_active() -> bool:
     """Checks if the argument processing bypass is currently active."""
-    _init_bypass_state() # Ensure it's initialized for the current thread
+    _init_bypass_state()  # Ensure it's initialized for the current thread
     return _bypass_state.active
 
 
@@ -44,8 +44,12 @@ def bypass_argument_processing() -> ContextManager[None]:
 # --- Exclusion Lists --- #
 # Functions whose arguments should not be processed or moved to the target device.
 # This is for functions that have specific CPU-only tensor requirements.
+# Note: These functions are wrapped to move their arguments to CPU and return values back to original device.
 ARGUMENT_PROCESSING_EXCLUSIONS: Set[str] = {
-    'torch.nn.utils.rnn.pack_padded_sequence',
+    'torch.nn.utils.rnn.pack_padded_sequence',  # Requires CPU for lengths argument
+    'torch.nn.utils.rnn.pad_packed_sequence',
+    'torch.nn.utils.rnn.pack_sequence',
+    'torch.nn.utils.rnn.pad_sequence',
 }
 
 __all__ = [
